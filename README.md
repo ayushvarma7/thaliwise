@@ -177,3 +177,13 @@ adb exec-out run-as com.example.identify tar c files/images > images.tar
 ```
 
 Clear history and memory deletes the experiment log too, and uninstalling the app deletes everything, so pull the log first. Logcat shows a one-line summary of every run: `adb logcat -s Identify:I VlmBridge:I IdentifyExp:D`.
+
+## 11. Health Connect
+
+The app reads today's steps, calories burned (total and active), and calories eaten (nutrition logged by any app) from Health Connect, which is built into Android 14 and newer. It uses the platform API in `android.health.connect`, so there is no extra library and no network use. This is why the minimum Android version is now 14.
+
+Permissions (each one approved by the user on the Health Connect screen): READ_STEPS, READ_ACTIVE_CALORIES_BURNED, READ_TOTAL_CALORIES_BURNED, READ_NUTRITION, and WRITE_NUTRITION (for logging meals in a later version). Health Connect only shows its permission screen for apps that declare a privacy policy screen, which is `PrivacyPolicyActivity` behind the `ViewPermissionUsageActivity` alias in the manifest.
+
+Settings > Health Connect shows the connection status and today's numbers. Step data comes from whichever app writes it into Health Connect (Fitbit or Google Fit on the test phone), so that app's Health Connect sync must be on. Every read is logged in the experiment log as a `health_read` event, and the permission screen outcome as `health_permission_result`.
+
+First test on the Pixel 8 (2026-10-01, 4:38 PM): 1,502 steps, 1,322 kcal burned (152 active), nothing eaten logged yet. The Google Fit app showed 1,318 steps at the same time; Health Connect combines all step sources, so its total can differ from any single app's count. The "Open Health Connect" button opens Health Connect's home screen (`android.health.connect.action.HEALTH_HOME_SETTINGS`); the SDK's `ACTION_MANAGE_HEALTH_PERMISSIONS` is reserved for system apps and crashes a normal app.
