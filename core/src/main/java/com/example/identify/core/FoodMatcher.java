@@ -2,6 +2,7 @@ package com.example.identify.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -11,8 +12,12 @@ import java.util.Set;
 public final class FoodMatcher {
     private FoodMatcher() {}
 
-    /** Matches scoring below this are dropped. */
+    /** Matches scoring below this (before cuisine bonuses) are dropped. */
     public static final double MIN_SCORE = 0.5;
+    /** Added when the row's cuisine is the cuisine the model named. */
+    public static final double CUISINE_BONUS = 0.1;
+    /** Added when the row's cuisine is one of the user's favorite cuisines. */
+    public static final double FAVORITE_BONUS = 0.05;
 
     private static final Set<String> STOPWORDS = new HashSet<>(Arrays.asList(
             "a", "an", "the", "of", "with", "and", "on", "in", "some", "my", "fresh", "homemade",
@@ -29,34 +34,51 @@ public final class FoodMatcher {
         }
     }
 
+    public static List<Match> match(String text, List<FoodItem> foods, int max) {
+        return match(text, null, Collections.emptySet(), foods, max);
+    }
+
     /**
      * Up to max foods, best first. Each food scores by its best name or alias; naming the brand adds 0.2,
      * and a branded food loses 0.05 when the text does not name the brand, so "cheeseburger" prefers the
-     * generic row while "McDonald's cheeseburger" prefers the branded one.
+     * generic row while "McDonald's cheeseburger" prefers the branded one. A row must reach MIN_SCORE by
+     * name; only then can the model's cuisine (CUISINE_BONUS) and the user's favorite cuisines
+     * (FAVORITE_BONUS) reorder it, so a cuisine never turns a non-match into a match.
      */
-    public static List<Match> match(String text, List<FoodItem> foods, int max) {
+    public static List<Match> match(String text, String cuisine, Set<String> favoriteCuisines,
+                                    List<FoodItem> foods, int max) {
         List<Match> out = new ArrayList<>();
         Set<String> query = new HashSet<>(tokens(text));
         if (query.isEmpty() || max <= 0) return out;
+        Set<String> cuisineWords = new HashSet<>(tokens(cuisine));
+        Set<String> favoriteWords = new HashSet<>();
+        for (String f : favoriteCuisines) favoriteWords.addAll(tokens(f));
         for (FoodItem f : foods) {
             double best = score(tokens(f.name), query);
             for (String alias : f.aliases) best = Math.max(best, score(tokens(alias), query));
             if (best <= 0) continue;
             List<String> brand = tokens(f.brand);
             if (!brand.isEmpty()) {
-                boolean named = false;
-                for (String t : brand) {
-                    if (query.contains(t)) named = true;
-                }
-                best += named ? 0.2 : -0.05;
+                best += containsAny(query, brand) ? 0.2 : -0.05;
             }
-            if (best >= MIN_SCORE) out.add(new Match(f, best));
+            if (best < MIN_SCORE) continue;
+            List<String> rowCuisine = tokens(f.cuisine);
+            if (containsAny(cuisineWords, rowCuisine)) best += CUISINE_BONUS;
+            if (containsAny(favoriteWords, rowCuisine)) best += FAVORITE_BONUS;
+            out.add(new Match(f, best));
         }
         out.sort((a, b) -> {
             int c = Double.compare(b.score, a.score);
             return c != 0 ? c : a.item.name.compareTo(b.item.name);
         });
         return out.size() > max ? new ArrayList<>(out.subList(0, max)) : out;
+    }
+
+    private static boolean containsAny(Set<String> set, List<String> words) {
+        for (String w : words) {
+            if (set.contains(w)) return true;
+        }
+        return false;
     }
 
     /** 0 when no word is shared. A name whose every word appears in the query gets a 0.2 bonus. */

@@ -7,14 +7,14 @@ import java.util.Set;
 
 /**
  * Parses the nutrition table shipped in app/src/main/assets/foods.txt.
- * One food per line, 11 fields separated by ';':
- * id;name;brand;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source
+ * One food per line, 12 fields separated by ';':
+ * id;name;brand;cuisine;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source
  * Aliases are separated by '|'. Blank lines and lines starting with '#' are skipped.
  */
 public final class FoodCatalog {
     private FoodCatalog() {}
 
-    public static final int FIELDS = 11;
+    public static final int FIELDS = 12;
 
     public static List<FoodItem> parse(String text) {
         List<FoodItem> out = new ArrayList<>();
@@ -35,12 +35,12 @@ public final class FoodCatalog {
             String name = f[1].trim();
             if (name.isEmpty()) throw new IllegalArgumentException("line " + n + ": empty name");
             List<String> aliases = new ArrayList<>();
-            for (String a : f[3].split("\\|")) {
+            for (String a : f[4].split("\\|")) {
                 if (!a.trim().isEmpty()) aliases.add(a.trim());
             }
-            out.add(new FoodItem(id, name, f[2].trim(), aliases, f[4].trim(),
-                    number(f[5], n), number(f[6], n), number(f[7], n), number(f[8], n), number(f[9], n),
-                    f[10].trim()));
+            out.add(new FoodItem(id, name, f[2].trim(), f[3].trim(), aliases, f[5].trim(),
+                    number(f[6], n), number(f[7], n), number(f[8], n), number(f[9], n), number(f[10], n),
+                    f[11].trim()));
         }
         return out;
     }

@@ -1,3 +1,346 @@
+# STEP 10.1: Food knowledge (prompt, cuisines, table, matching)
+
+Goal: the model names dishes (not objects) and their cuisine; the table covers the cuisines people eat in the USA (about 300 rows); matching uses the model's cuisine and, later, the user's favorite cuisines. Stories US-2.2 and US-2.3.
+
+The table gains a `cuisine` column (12 fields per row): `id;name;brand;cuisine;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source`. Restaurant chains use the cuisine `Fast food`; staples use `Everyday`.
+
+EDIT `core/src/main/java/com/example/identify/core/PromptBuilder.java`
+Find:
+```java
+    public static final String SYSTEM_BASE =
+            "You identify the main object in a photo. Be specific: give the breed, species, variety, make, or model when it is visible.\n"
+          + "Reply in exactly two lines and nothing else:\n"
+          + "Label: <short name, at most 6 words>\n"
+          + "Description: <one sentence>";
+```
+Replace with:
+```java
+    public static final String SYSTEM_BASE =
+            "You identify the food or drink in a photo. Name the specific dish the way people order it, for example chicken tikka masala, carne asada tacos, pad thai, pepperoni pizza, or a menu item such as a Big Mac.\n"
+          + "If several foods are shown, name the main one. If there is no food or drink, use the label Not food.\n"
+          + "Reply in exactly three lines and nothing else:\n"
+          + "Label: <dish name, at most 6 words>\n"
+          + "Cuisine: <one cuisine, for example Indian, Mexican, Chinese, Japanese, Italian, American>\n"
+          + "Description: <one sentence>";
+```
+
+EDIT `core/src/main/java/com/example/identify/core/PromptBuilder.java`
+Find:
+```java
+    public static final String USER_PROMPT = "Identify the main object in this photo.";
+```
+Replace with:
+```java
+    public static final String USER_PROMPT = "What food is in this photo?";
+```
+
+REPLACE `core/src/main/java/com/example/identify/core/AnswerParser.java`
+```java
+package com.example.identify.core;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public final class AnswerParser {
+    private AnswerParser() {}
+
+    public static final int MAX_LABEL_CHARS = 60;
+
+    public static final class ParsedAnswer {
+        public final String label;
+        public final String description;
+        /** The model's "Cuisine:" line, cleaned; empty when it gave none. */
+        public final String cuisine;
+
+        public ParsedAnswer(String label, String description) {
+            this(label, description, "");
+        }
+
+        public ParsedAnswer(String label, String description, String cuisine) {
+            this.label = label;
+            this.description = description;
+            this.cuisine = cuisine;
+        }
+    }
+
+    public static ParsedAnswer parse(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return new ParsedAnswer("Unknown", "");
+        String label = null;
+        String description = null;
+        String cuisine = null;
+        List<String> other = new ArrayList<>();
+        for (String line : raw.split("\\r?\\n")) {
+            String l = line.replace("*", "").trim();
+            if (l.isEmpty()) continue;
+            String lower = l.toLowerCase(Locale.ROOT);
+            if (label == null && lower.startsWith("label:")) {
+                label = l.substring(6).trim();
+            } else if (cuisine == null && lower.startsWith("cuisine:")) {
+                cuisine = l.substring(8).trim();
+            } else if (description == null && lower.startsWith("description:")) {
+                description = l.substring(12).trim();
+            } else {
+                other.add(l);
+            }
+        }
+        if (label == null || label.isEmpty()) label = other.isEmpty() ? "" : other.remove(0);
+        if (description == null) description = String.join(" ", other).trim();
+        label = cleanLabel(label);
+        if (label.isEmpty()) label = "Unknown";
+        return new ParsedAnswer(label, description, cuisine == null ? "" : cleanLabel(cuisine));
+    }
+
+    static String cleanLabel(String s) {
+        String t = s.trim();
+        while (!t.isEmpty() && (t.startsWith("\"") || t.startsWith("'"))) t = t.substring(1).trim();
+        while (!t.isEmpty() && (t.endsWith("\"") || t.endsWith("'") || t.endsWith("."))) {
+            t = t.substring(0, t.length() - 1).trim();
+        }
+        t = t.replaceAll("\\s+", " ");
+        if (t.length() > MAX_LABEL_CHARS) t = t.substring(0, MAX_LABEL_CHARS).trim();
+        return t;
+    }
+}
+```
+
+REPLACE `core/src/main/java/com/example/identify/core/FoodItem.java`
+```java
+package com.example.identify.core;
+
+import java.util.Collections;
+import java.util.List;
+
+/** One row of the nutrition table. All amounts are for one serving. */
+public final class FoodItem {
+    public final String id;
+    public final String name;
+    public final String brand;           // empty for generic foods
+    public final String cuisine;         // for example "Indian", "Fast food", "Everyday"
+    public final List<String> aliases;   // names a model or a user may use for this food
+    public final String serving;         // for example "sandwich" or "cup cooked"
+    public final double servingGrams;
+    public final double kcal;
+    public final double proteinG;
+    public final double carbsG;
+    public final double fatG;
+    public final String source;
+
+    public FoodItem(String id, String name, String brand, String cuisine, List<String> aliases, String serving,
+                    double servingGrams, double kcal, double proteinG, double carbsG, double fatG, String source) {
+        this.id = id;
+        this.name = name;
+        this.brand = brand;
+        this.cuisine = cuisine;
+        this.aliases = Collections.unmodifiableList(aliases);
+        this.serving = serving;
+        this.servingGrams = servingGrams;
+        this.kcal = kcal;
+        this.proteinG = proteinG;
+        this.carbsG = carbsG;
+        this.fatG = fatG;
+        this.source = source;
+    }
+
+    /** "Big Mac (McDonald's)" for branded foods, the plain name otherwise. */
+    public String displayName() {
+        return brand.isEmpty() ? name : name + " (" + brand + ")";
+    }
+}
+```
+
+REPLACE `core/src/main/java/com/example/identify/core/FoodCatalog.java`
+```java
+package com.example.identify.core;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Parses the nutrition table shipped in app/src/main/assets/foods.txt.
+ * One food per line, 12 fields separated by ';':
+ * id;name;brand;cuisine;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source
+ * Aliases are separated by '|'. Blank lines and lines starting with '#' are skipped.
+ */
+public final class FoodCatalog {
+    private FoodCatalog() {}
+
+    public static final int FIELDS = 12;
+
+    public static List<FoodItem> parse(String text) {
+        List<FoodItem> out = new ArrayList<>();
+        Set<String> ids = new HashSet<>();
+        String[] lines = text.split("\\r?\\n");
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+            int n = i + 1;
+            String[] f = line.split(";", -1);
+            if (f.length != FIELDS) {
+                throw new IllegalArgumentException("line " + n + ": expected " + FIELDS + " fields, found " + f.length);
+            }
+            String id = f[0].trim();
+            if (id.isEmpty() || !ids.add(id)) {
+                throw new IllegalArgumentException("line " + n + ": empty or duplicate id '" + id + "'");
+            }
+            String name = f[1].trim();
+            if (name.isEmpty()) throw new IllegalArgumentException("line " + n + ": empty name");
+            List<String> aliases = new ArrayList<>();
+            for (String a : f[4].split("\\|")) {
+                if (!a.trim().isEmpty()) aliases.add(a.trim());
+            }
+            out.add(new FoodItem(id, name, f[2].trim(), f[3].trim(), aliases, f[5].trim(),
+                    number(f[6], n), number(f[7], n), number(f[8], n), number(f[9], n), number(f[10], n),
+                    f[11].trim()));
+        }
+        return out;
+    }
+
+    private static double number(String s, int line) {
+        double v;
+        try {
+            v = Double.parseDouble(s.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("line " + line + ": not a number '" + s + "'");
+        }
+        if (Double.isNaN(v) || Double.isInfinite(v) || v < 0) {
+            throw new IllegalArgumentException("line " + line + ": number out of range '" + s + "'");
+        }
+        return v;
+    }
+}
+```
+
+REPLACE `core/src/main/java/com/example/identify/core/FoodMatcher.java`
+```java
+package com.example.identify.core;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/** Finds the nutrition table rows that a free-text food name (a model label or user text) refers to. */
+public final class FoodMatcher {
+    private FoodMatcher() {}
+
+    /** Matches scoring below this (before cuisine bonuses) are dropped. */
+    public static final double MIN_SCORE = 0.5;
+    /** Added when the row's cuisine is the cuisine the model named. */
+    public static final double CUISINE_BONUS = 0.1;
+    /** Added when the row's cuisine is one of the user's favorite cuisines. */
+    public static final double FAVORITE_BONUS = 0.05;
+
+    private static final Set<String> STOPWORDS = new HashSet<>(Arrays.asList(
+            "a", "an", "the", "of", "with", "and", "on", "in", "some", "my", "fresh", "homemade",
+            "food", "meal", "dish", "plate", "bowl", "slice", "piece", "serving", "cup", "glass",
+            "side", "one", "two", "small", "medium", "large"));
+
+    public static final class Match {
+        public final FoodItem item;
+        public final double score;
+
+        Match(FoodItem item, double score) {
+            this.item = item;
+            this.score = score;
+        }
+    }
+
+    public static List<Match> match(String text, List<FoodItem> foods, int max) {
+        return match(text, null, Collections.emptySet(), foods, max);
+    }
+
+    /**
+     * Up to max foods, best first. Each food scores by its best name or alias; naming the brand adds 0.2,
+     * and a branded food loses 0.05 when the text does not name the brand, so "cheeseburger" prefers the
+     * generic row while "McDonald's cheeseburger" prefers the branded one. A row must reach MIN_SCORE by
+     * name; only then can the model's cuisine (CUISINE_BONUS) and the user's favorite cuisines
+     * (FAVORITE_BONUS) reorder it, so a cuisine never turns a non-match into a match.
+     */
+    public static List<Match> match(String text, String cuisine, Set<String> favoriteCuisines,
+                                    List<FoodItem> foods, int max) {
+        List<Match> out = new ArrayList<>();
+        Set<String> query = new HashSet<>(tokens(text));
+        if (query.isEmpty() || max <= 0) return out;
+        Set<String> cuisineWords = new HashSet<>(tokens(cuisine));
+        Set<String> favoriteWords = new HashSet<>();
+        for (String f : favoriteCuisines) favoriteWords.addAll(tokens(f));
+        for (FoodItem f : foods) {
+            double best = score(tokens(f.name), query);
+            for (String alias : f.aliases) best = Math.max(best, score(tokens(alias), query));
+            if (best <= 0) continue;
+            List<String> brand = tokens(f.brand);
+            if (!brand.isEmpty()) {
+                best += containsAny(query, brand) ? 0.2 : -0.05;
+            }
+            if (best < MIN_SCORE) continue;
+            List<String> rowCuisine = tokens(f.cuisine);
+            if (containsAny(cuisineWords, rowCuisine)) best += CUISINE_BONUS;
+            if (containsAny(favoriteWords, rowCuisine)) best += FAVORITE_BONUS;
+            out.add(new Match(f, best));
+        }
+        out.sort((a, b) -> {
+            int c = Double.compare(b.score, a.score);
+            return c != 0 ? c : a.item.name.compareTo(b.item.name);
+        });
+        return out.size() > max ? new ArrayList<>(out.subList(0, max)) : out;
+    }
+
+    private static boolean containsAny(Set<String> set, List<String> words) {
+        for (String w : words) {
+            if (set.contains(w)) return true;
+        }
+        return false;
+    }
+
+    /** 0 when no word is shared. A name whose every word appears in the query gets a 0.2 bonus. */
+    static double score(List<String> name, Set<String> query) {
+        if (name.isEmpty()) return 0;
+        Set<String> words = new HashSet<>(name);
+        int hits = 0;
+        for (String t : words) {
+            if (query.contains(t)) hits++;
+        }
+        if (hits == 0) return 0;
+        double recall = (double) hits / words.size();
+        double precision = (double) hits / query.size();
+        double s = 0.7 * recall + 0.3 * precision;
+        if (hits == words.size()) s += 0.2;
+        return s;
+    }
+
+    /** Lowercase words without punctuation, apostrophes, stop words, or a plural s. */
+    public static List<String> tokens(String text) {
+        List<String> out = new ArrayList<>();
+        if (text == null) return out;
+        String t = text.toLowerCase(Locale.ROOT)
+                .replace("'", "")
+                .replace("’", "")
+                .replaceAll("[^a-z0-9]+", " ")
+                .trim();
+        if (t.isEmpty()) return out;
+        for (String w : t.split(" ")) {
+            String s = stem(w);
+            if (!STOPWORDS.contains(s)) out.add(s);
+        }
+        return out;
+    }
+
+    /** Drops one plural s ("bananas" to "banana"). Applied to both sides, so odd stems still match. */
+    static String stem(String w) {
+        if (w.length() > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.substring(0, w.length() - 1);
+        return w;
+    }
+}
+```
+
+REPLACE `app/src/main/assets/foods.txt`
+```text
 # IdentifyVLM nutrition table. One food per line, 12 fields separated by ';':
 # id;name;brand;cuisine;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source
 # Aliases are separated by '|'. Values are for one serving and are approximate reference values.
@@ -301,3 +644,217 @@ arepa;Arepa with cheese;;Latin American;arepa|arepas;arepa;180;450;15;45;22;Typi
 pupusas;Pupusas;;Latin American;pupusa|pupusas;2 pupusas;250;600;20;65;28;Typical restaurant serving (approximate)
 ceviche;Ceviche;;Latin American;ceviche;cup;200;200;30;10;4;Typical restaurant serving (approximate)
 injera_wat;Injera with wat;;Ethiopian;injera|doro wat|wat|ethiopian food;plate;450;650;30;85;20;Typical restaurant serving (approximate)
+```
+
+REPLACE `core/src/test/java/com/example/identify/core/FoodCatalogTest.java`
+```java
+package com.example.identify.core;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.junit.Test;
+
+public class FoodCatalogTest {
+
+    /** The table shipped in the app. Gradle runs :core tests with the core/ folder as working directory. */
+    static List<FoodItem> shipped() throws IOException {
+        File f = new File("../app/src/main/assets/foods.txt");
+        return FoodCatalog.parse(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void parsesFieldsSkippingCommentsAndBlanks() {
+        String text = "# header\n\nbanana;Banana;;Fruit;banana|bananas;medium banana;118;105;1.3;27;0.4;USDA\n"
+                + "mcd_big_mac;Big Mac;McDonald's;Fast food;big mac;sandwich;219;590;25;46;34;McDonald's\n";
+        List<FoodItem> foods = FoodCatalog.parse(text);
+        assertEquals(2, foods.size());
+        FoodItem b = foods.get(0);
+        assertEquals("banana", b.id);
+        assertEquals("", b.brand);
+        assertEquals("Fruit", b.cuisine);
+        assertEquals(2, b.aliases.size());
+        assertEquals(105, b.kcal, 0);
+        assertEquals("Banana", b.displayName());
+        assertEquals("Big Mac (McDonald's)", foods.get(1).displayName());
+        assertEquals("Fast food", foods.get(1).cuisine);
+    }
+
+    @Test
+    public void wrongFieldCountNamesTheLine() {
+        try {
+            FoodCatalog.parse("# x\nok;Ok;;Everyday;ok;s;1;1;1;1;1;src\nbad;Bad;;bad\n");
+            fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage(), e.getMessage().startsWith("line 3"));
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void duplicateIdRejected() {
+        FoodCatalog.parse("a;A;;Everyday;a;s;1;1;1;1;1;src\na;B;;Everyday;b;s;1;1;1;1;1;src\n");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void negativeNumberRejected() {
+        FoodCatalog.parse("a;A;;Everyday;a;s;1;-5;1;1;1;src\n");
+    }
+
+    @Test
+    public void shippedTableIsValid() throws IOException {
+        List<FoodItem> foods = shipped();
+        assertTrue("table too small: " + foods.size(), foods.size() >= 280);
+        Set<String> cuisines = new HashSet<>();
+        for (FoodItem f : foods) {
+            assertTrue(f.id + " needs an alias", !f.aliases.isEmpty());
+            assertTrue(f.id + " kcal", f.kcal > 0 && f.kcal < 2000);
+            assertTrue(f.id + " source", !f.source.isEmpty());
+            assertTrue(f.id + " cuisine", !f.cuisine.isEmpty());
+            cuisines.add(f.cuisine);
+        }
+        for (String c : new String[]{"Indian", "Mexican", "Chinese", "Japanese", "Korean", "Thai", "Vietnamese",
+                "Italian", "Middle Eastern", "Mediterranean", "American", "Southern", "Caribbean",
+                "Latin American", "Fast food"}) {
+            assertTrue("missing cuisine " + c, cuisines.contains(c));
+        }
+    }
+}
+```
+
+EDIT `core/src/test/java/com/example/identify/core/MealsTest.java`
+Find:
+```java
+        FoodItem f = new FoodItem("x", "X", "", Collections.singletonList("x"), "sandwich", 165, 450, 25, 34, 24, "src");
+```
+Replace with:
+```java
+        FoodItem f = new FoodItem("x", "X", "", "American", Collections.singletonList("x"), "sandwich",
+                165, 450, 25, 34, 24, "src");
+```
+
+CREATE `core/src/test/java/com/example/identify/core/FoodMatcherCuisineTest.java`
+```java
+package com.example.identify.core;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+public class FoodMatcherCuisineTest {
+
+    private static List<FoodItem> foods;
+
+    @BeforeClass
+    public static void load() throws IOException {
+        foods = FoodCatalogTest.shipped();
+    }
+
+    private static String top(String text) {
+        List<FoodMatcher.Match> m = FoodMatcher.match(text, foods, 5);
+        return m.isEmpty() ? null : m.get(0).item.id;
+    }
+
+    @Test
+    public void dishesAcrossCuisines() {
+        assertEquals("chicken_tikka_masala", top("Chicken tikka masala"));
+        assertEquals("masala_dosa", top("Masala dosa"));
+        assertEquals("tacos_carne_asada", top("Carne asada tacos"));
+        assertEquals("tacos_al_pastor", top("Tacos al pastor"));
+        assertEquals("pho", top("Pho"));
+        assertEquals("pad_thai", top("Pad thai"));
+        assertEquals("bibimbap", top("Bibimbap"));
+        assertEquals("pita", top("Pita bread"));
+        assertEquals("shawarma", top("Chicken shawarma"));
+        assertEquals("general_tso_chicken", top("General Tso's chicken"));
+        assertEquals("bbq_ribs", top("BBQ ribs"));
+        assertEquals("ramen_restaurant", top("Ramen"));
+    }
+
+    @Test
+    public void chainItemsNeedTheirName() {
+        assertEquals("bk_whopper", top("Whopper"));
+        assertEquals("orange_chicken", top("Orange chicken"));
+        assertEquals("panda_orange_chicken", top("Panda Express orange chicken"));
+    }
+
+    @Test
+    public void cuisineAndFavoritesBreakTies() {
+        // "spring rolls" matches the Chinese fried rolls and the Vietnamese fresh rolls equally by name
+        // ("fresh" is a stop word), so the cuisine decides.
+        List<FoodMatcher.Match> chinese = FoodMatcher.match("spring rolls", "Chinese", Collections.emptySet(), foods, 2);
+        assertEquals("spring_roll_fried", chinese.get(0).item.id);
+        List<FoodMatcher.Match> fav = FoodMatcher.match("spring rolls", null, Collections.singleton("Chinese"), foods, 2);
+        assertEquals("spring_roll_fried", fav.get(0).item.id);
+        List<FoodMatcher.Match> viet = FoodMatcher.match("spring rolls", "Vietnamese", Collections.emptySet(), foods, 2);
+        assertEquals("fresh_spring_rolls", viet.get(0).item.id);
+    }
+
+    @Test
+    public void cuisineNeverCreatesAMatch() {
+        assertTrue(FoodMatcher.match("Not food", "Indian", Collections.singleton("Indian"), foods, 5).isEmpty());
+        assertTrue(FoodMatcher.match("computer mouse", "American", Collections.emptySet(), foods, 5).isEmpty());
+    }
+}
+```
+
+CREATE `core/src/test/java/com/example/identify/core/AnswerParserCuisineTest.java`
+```java
+package com.example.identify.core;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+
+public class AnswerParserCuisineTest {
+
+    @Test
+    public void threeLineAnswer() {
+        AnswerParser.ParsedAnswer a = AnswerParser.parse(
+                "Label: Chicken tikka masala\nCuisine: Indian\nDescription: Chicken in a spiced tomato cream sauce.");
+        assertEquals("Chicken tikka masala", a.label);
+        assertEquals("Indian", a.cuisine);
+        assertEquals("Chicken in a spiced tomato cream sauce.", a.description);
+    }
+
+    @Test
+    public void markdownCuisine() {
+        AnswerParser.ParsedAnswer a = AnswerParser.parse("**Label:** Pho\n**Cuisine:** \"Vietnamese\".");
+        assertEquals("Pho", a.label);
+        assertEquals("Vietnamese", a.cuisine);
+        assertEquals("", a.description);
+    }
+
+    @Test
+    public void missingCuisineIsEmpty() {
+        assertEquals("", AnswerParser.parse("Label: Banana\nDescription: A fruit.").cuisine);
+        assertEquals("", AnswerParser.parse(null).cuisine);
+        assertEquals("", AnswerParser.parse("mouse").cuisine);
+    }
+}
+```
+
+## VERIFY 10.1
+
+```bash
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" GRADLE_USER_HOME="/Users/ayush/Downloads/CLAUDE/IdentifyVLM/.toolchain/gradle-home" ./gradlew :core:test --console=plain -q
+ls core/build/test-results/test/ | grep -c "^TEST-"
+grep -vc "^#" app/src/main/assets/foods.txt
+```
+Exit 0 (every old and new test passes), 15 test classes, at least 280 rows. The app module is not built in this step (ResultViewModel still uses the 2-argument ParsedAnswer constructor, which still exists, so it would compile; it is updated in 10.3).
+
+Commit subject: `Make identification food-first: dish prompt, cuisine line, 300-dish table`.

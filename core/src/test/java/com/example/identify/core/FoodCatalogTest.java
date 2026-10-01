@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -22,23 +24,25 @@ public class FoodCatalogTest {
 
     @Test
     public void parsesFieldsSkippingCommentsAndBlanks() {
-        String text = "# header\n\nbanana;Banana;;banana|bananas;medium banana;118;105;1.3;27;0.4;USDA\n"
-                + "mcd_big_mac;Big Mac;McDonald's;big mac;sandwich;219;590;25;46;34;McDonald's\n";
+        String text = "# header\n\nbanana;Banana;;Fruit;banana|bananas;medium banana;118;105;1.3;27;0.4;USDA\n"
+                + "mcd_big_mac;Big Mac;McDonald's;Fast food;big mac;sandwich;219;590;25;46;34;McDonald's\n";
         List<FoodItem> foods = FoodCatalog.parse(text);
         assertEquals(2, foods.size());
         FoodItem b = foods.get(0);
         assertEquals("banana", b.id);
         assertEquals("", b.brand);
+        assertEquals("Fruit", b.cuisine);
         assertEquals(2, b.aliases.size());
         assertEquals(105, b.kcal, 0);
         assertEquals("Banana", b.displayName());
         assertEquals("Big Mac (McDonald's)", foods.get(1).displayName());
+        assertEquals("Fast food", foods.get(1).cuisine);
     }
 
     @Test
     public void wrongFieldCountNamesTheLine() {
         try {
-            FoodCatalog.parse("# x\nok;Ok;;ok;s;1;1;1;1;1;src\nbad;Bad;;bad\n");
+            FoodCatalog.parse("# x\nok;Ok;;Everyday;ok;s;1;1;1;1;1;src\nbad;Bad;;bad\n");
             fail("expected IllegalArgumentException");
         } catch (IllegalArgumentException e) {
             assertTrue(e.getMessage(), e.getMessage().startsWith("line 3"));
@@ -47,22 +51,30 @@ public class FoodCatalogTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void duplicateIdRejected() {
-        FoodCatalog.parse("a;A;;a;s;1;1;1;1;1;src\na;B;;b;s;1;1;1;1;1;src\n");
+        FoodCatalog.parse("a;A;;Everyday;a;s;1;1;1;1;1;src\na;B;;Everyday;b;s;1;1;1;1;1;src\n");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void negativeNumberRejected() {
-        FoodCatalog.parse("a;A;;a;s;1;-5;1;1;1;src\n");
+        FoodCatalog.parse("a;A;;Everyday;a;s;1;-5;1;1;1;src\n");
     }
 
     @Test
     public void shippedTableIsValid() throws IOException {
         List<FoodItem> foods = shipped();
-        assertTrue("table too small: " + foods.size(), foods.size() >= 70);
+        assertTrue("table too small: " + foods.size(), foods.size() >= 280);
+        Set<String> cuisines = new HashSet<>();
         for (FoodItem f : foods) {
             assertTrue(f.id + " needs an alias", !f.aliases.isEmpty());
             assertTrue(f.id + " kcal", f.kcal > 0 && f.kcal < 2000);
             assertTrue(f.id + " source", !f.source.isEmpty());
+            assertTrue(f.id + " cuisine", !f.cuisine.isEmpty());
+            cuisines.add(f.cuisine);
+        }
+        for (String c : new String[]{"Indian", "Mexican", "Chinese", "Japanese", "Korean", "Thai", "Vietnamese",
+                "Italian", "Middle Eastern", "Mediterranean", "American", "Southern", "Caribbean",
+                "Latin American", "Fast food"}) {
+            assertTrue("missing cuisine " + c, cuisines.contains(c));
         }
     }
 }

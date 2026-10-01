@@ -8,6 +8,7 @@ public final class FoodItem {
     public final String id;
     public final String name;
     public final String brand;           // empty for generic foods
+    public final String cuisine;         // for example "Indian", "Fast food", "Everyday"
     public final List<String> aliases;   // names a model or a user may use for this food
     public final String serving;         // for example "sandwich" or "cup cooked"
     public final double servingGrams;
@@ -17,11 +18,12 @@ public final class FoodItem {
     public final double fatG;
     public final String source;
 
-    public FoodItem(String id, String name, String brand, List<String> aliases, String serving,
+    public FoodItem(String id, String name, String brand, String cuisine, List<String> aliases, String serving,
                     double servingGrams, double kcal, double proteinG, double carbsG, double fatG, String source) {
         this.id = id;
         this.name = name;
         this.brand = brand;
+        this.cuisine = cuisine;
         this.aliases = Collections.unmodifiableList(aliases);
         this.serving = serving;
         this.servingGrams = servingGrams;

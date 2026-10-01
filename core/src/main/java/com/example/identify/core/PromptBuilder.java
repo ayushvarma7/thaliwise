@@ -6,15 +6,17 @@ public final class PromptBuilder {
     private PromptBuilder() {}
 
     public static final String SYSTEM_BASE =
-            "You identify the main object in a photo. Be specific: give the breed, species, variety, make, or model when it is visible.\n"
-          + "Reply in exactly two lines and nothing else:\n"
-          + "Label: <short name, at most 6 words>\n"
+            "You identify the food or drink in a photo. Name the specific dish the way people order it, for example chicken tikka masala, carne asada tacos, pad thai, pepperoni pizza, or a menu item such as a Big Mac.\n"
+          + "If several foods are shown, name the main one. If there is no food or drink, use the label Not food.\n"
+          + "Reply in exactly three lines and nothing else:\n"
+          + "Label: <dish name, at most 6 words>\n"
+          + "Cuisine: <one cuisine, for example Indian, Mexican, Chinese, Japanese, Italian, American>\n"
           + "Description: <one sentence>";
 
     public static final String CORRECTIONS_HEADER =
             "Past corrections from this user. If the new photo shows the same kind of thing, use the corrected name:";
 
-    public static final String USER_PROMPT = "Identify the main object in this photo.";
+    public static final String USER_PROMPT = "What food is in this photo?";
 
     public static final int MAX_FIELD_CHARS = 80;
 

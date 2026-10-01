@@ -138,3 +138,8 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 9.5 Compliance checks: DONE - all 11 pass (no .kt, no androidx.health, network only in ModelDownloader, core android-free, no forbidden words, no dashes, no camera/storage permission, no TODO, 74 food rows, still 5 health permissions, database version 1).
 - 9.6 Install and test on the phone: PARTIAL - installed (adb install -r Success, no new crash). The user ran identifications (labels "Chicken", "Pita bread") but did not log a meal before asking for the Phase 10 redesign; "Pita bread" had no table row, which is one reason Phase 10 expands the table. The meal write test moves to the Phase 10 device test. The user then cleared app history and the experiment log with Settings > Clear history and memory.
 - 9.7 Docs: DONE - README section 12 (Food logging) added.
+
+## Phase 10: Food app redesign
+
+- 10.0 Specs: DONE - docs/USER_STORIES.md (personas, profiling, stories, storyboard) and docs/phase10/ step files committed before execution.
+- 10.1 Food knowledge: DONE - food-first prompt with Cuisine line, AnswerParser cuisine, 12-field table with 300 rows across 15+ cuisines and US chains, cuisine- and favorite-aware FoodMatcher; :core:test 15 classes pass.

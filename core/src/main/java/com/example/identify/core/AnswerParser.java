@@ -12,13 +12,25 @@ public final class AnswerParser {
     public static final class ParsedAnswer {
         public final String label;
         public final String description;
-        public ParsedAnswer(String label, String description) { this.label = label; this.description = description; }
+        /** The model's "Cuisine:" line, cleaned; empty when it gave none. */
+        public final String cuisine;
+
+        public ParsedAnswer(String label, String description) {
+            this(label, description, "");
+        }
+
+        public ParsedAnswer(String label, String description, String cuisine) {
+            this.label = label;
+            this.description = description;
+            this.cuisine = cuisine;
+        }
     }
 
     public static ParsedAnswer parse(String raw) {
         if (raw == null || raw.trim().isEmpty()) return new ParsedAnswer("Unknown", "");
         String label = null;
         String description = null;
+        String cuisine = null;
         List<String> other = new ArrayList<>();
         for (String line : raw.split("\\r?\\n")) {
             String l = line.replace("*", "").trim();
@@ -26,6 +38,8 @@ public final class AnswerParser {
             String lower = l.toLowerCase(Locale.ROOT);
             if (label == null && lower.startsWith("label:")) {
                 label = l.substring(6).trim();
+            } else if (cuisine == null && lower.startsWith("cuisine:")) {
+                cuisine = l.substring(8).trim();
             } else if (description == null && lower.startsWith("description:")) {
                 description = l.substring(12).trim();
             } else {
@@ -36,7 +50,7 @@ public final class AnswerParser {
         if (description == null) description = String.join(" ", other).trim();
         label = cleanLabel(label);
         if (label.isEmpty()) label = "Unknown";
-        return new ParsedAnswer(label, description);
+        return new ParsedAnswer(label, description, cuisine == null ? "" : cleanLabel(cuisine));
     }
 
     static String cleanLabel(String s) {
