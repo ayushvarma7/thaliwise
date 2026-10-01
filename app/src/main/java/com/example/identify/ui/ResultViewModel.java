@@ -52,12 +52,15 @@ public class ResultViewModel extends AndroidViewModel {
         public final float[] embedding;
         public final String runId;         // links the experiment log run to its feedback event
         public final String details;       // time, CPU, memory, confidence, and neighbor summary
+        public final String cuisine;       // the model's "Cuisine:" line; empty for memory hits
 
         IdentifyResult(String label, String description, String rawOutput, String source,
-                       float nearestScore, long latencyMs, float[] embedding, String runId, String details) {
+                       float nearestScore, long latencyMs, float[] embedding, String runId, String details,
+                       String cuisine) {
             this.label = label; this.description = description; this.rawOutput = rawOutput;
             this.source = source; this.nearestScore = nearestScore; this.latencyMs = latencyMs;
             this.embedding = embedding; this.runId = runId; this.details = details;
+            this.cuisine = cuisine == null ? "" : cuisine;
         }
     }
 
@@ -184,7 +187,7 @@ public class ResultViewModel extends AndroidViewModel {
                         afterKnn.wallMs - afterEmbed.wallMs, tele, neighbors);
                 ExperimentLog.append(app, rec);
                 IdentifyResult r = new IdentifyResult(hit.label, "", null, Config.SOURCE_MEMORY,
-                        nearestScore, total, emb, runId, details);
+                        nearestScore, total, emb, runId, details, "");
                 App.runOnMainThread(() -> showResult(r));
                 return;
             }
@@ -210,6 +213,7 @@ public class ResultViewModel extends AndroidViewModel {
             put(rec, "raw_output", raw);
             put(rec, "label", parsed.label);
             put(rec, "description", parsed.description);
+            put(rec, "cuisine", parsed.cuisine);
             put(rec, "label_stats", labelStatsJson(ls));
             put(rec, "native_generate", gen);
             put(rec, "total_ms", total);
@@ -230,7 +234,7 @@ public class ResultViewModel extends AndroidViewModel {
             String details = modelDetails(app, total, loadMs, afterEmbed.wallMs - afterPrep.wallMs, gen, tele, ls, neighbors);
             ExperimentLog.append(app, rec);
             IdentifyResult r = new IdentifyResult(parsed.label, parsed.description, raw,
-                    Config.SOURCE_MODEL, nearestScore, total, emb, runId, details);
+                    Config.SOURCE_MODEL, nearestScore, total, emb, runId, details, parsed.cuisine);
             App.runOnMainThread(() -> showResult(r));
         } catch (Throwable t) {
             Log.e(Config.LOG_TAG, "identify failed run_id=" + runId, t);

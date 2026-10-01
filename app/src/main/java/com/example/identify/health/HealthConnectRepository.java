@@ -9,6 +9,8 @@ import android.health.connect.HealthConnectException;
 import android.health.connect.HealthConnectManager;
 import android.health.connect.HealthPermissions;
 import android.health.connect.InsertRecordsResponse;
+import android.health.connect.ReadRecordsRequestUsingFilters;
+import android.health.connect.ReadRecordsResponse;
 import android.health.connect.RecordIdFilter;
 import android.health.connect.TimeInstantRangeFilter;
 import android.health.connect.datatypes.ActiveCaloriesBurnedRecord;
@@ -29,6 +31,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.identify.Config;
 import com.example.identify.core.DailyHealth;
+import com.example.identify.core.MealEntry;
 import com.example.identify.core.Meals;
 import com.example.identify.util.ExperimentLog;
 
@@ -309,6 +312,76 @@ public final class HealthConnectRepository {
         } catch (RuntimeException e) {
             Log.w(Config.HEALTH_TAG, "meal delete failed", e);
             main.execute(() -> cb.onResult(e.toString()));
+        }
+    }
+
+    /** meals is never null; on failure it is empty and error says why. Main thread. */
+    public interface MealsCallback {
+        void onResult(List<MealEntry> meals, String error);
+    }
+
+    /** A NutritionRecord meal type as a slot; null for MEAL_TYPE_UNKNOWN and values this app does not know. */
+    public static Meals.Slot slotFromMealType(int mealType) {
+        switch (mealType) {
+            case MealType.MEAL_TYPE_BREAKFAST: return Meals.Slot.BREAKFAST;
+            case MealType.MEAL_TYPE_LUNCH: return Meals.Slot.LUNCH;
+            case MealType.MEAL_TYPE_DINNER: return Meals.Slot.DINNER;
+            case MealType.MEAL_TYPE_SNACK: return Meals.Slot.SNACK;
+            default: return null;
+        }
+    }
+
+    /** Every app's nutrition records starting between from and to; mine marks the ones this app wrote. */
+    public static void readMeals(Context ctx, Instant from, Instant to, MealsCallback cb) {
+        final Context app = ctx.getApplicationContext();
+        final HealthConnectManager hc = manager(app);
+        if (hc == null) {
+            cb.onResult(new ArrayList<>(), "Health Connect is not available on this device");
+            return;
+        }
+        if (!isGranted(app, HealthPermissions.READ_NUTRITION)) {
+            cb.onResult(new ArrayList<>(), "nutrition read permission not granted");
+            return;
+        }
+        TimeInstantRangeFilter range = new TimeInstantRangeFilter.Builder()
+                .setStartTime(from)
+                .setEndTime(to)
+                .build();
+        ReadRecordsRequestUsingFilters<NutritionRecord> request =
+                new ReadRecordsRequestUsingFilters.Builder<>(NutritionRecord.class)
+                        .setTimeRangeFilter(range)
+                        .setPageSize(1000)
+                        .build();
+        final String me = app.getPackageName();
+        final long t0 = SystemClock.elapsedRealtime();
+        Executor main = ContextCompat.getMainExecutor(app);
+        try {
+            hc.readRecords(request, main,
+                    new OutcomeReceiver<ReadRecordsResponse<NutritionRecord>, HealthConnectException>() {
+                        @Override
+                        public void onResult(ReadRecordsResponse<NutritionRecord> response) {
+                            List<MealEntry> meals = new ArrayList<>();
+                            for (NutritionRecord r : response.getRecords()) {
+                                Energy e = r.getEnergy();
+                                meals.add(new MealEntry(r.getMetadata().getId(), r.getMealName(),
+                                        e == null ? Double.NaN : kcal(e), r.getStartTime().toEpochMilli(),
+                                        slotFromMealType(r.getMealType()),
+                                        me.equals(r.getMetadata().getDataOrigin().getPackageName())));
+                            }
+                            Log.i(Config.HEALTH_TAG, "read meals count=" + meals.size()
+                                    + " ms=" + (SystemClock.elapsedRealtime() - t0));
+                            cb.onResult(meals, null);
+                        }
+
+                        @Override
+                        public void onError(HealthConnectException e) {
+                            Log.w(Config.HEALTH_TAG, "read meals failed", e);
+                            cb.onResult(new ArrayList<>(), e.getMessage() == null ? "error " + e.getErrorCode() : e.getMessage());
+                        }
+                    });
+        } catch (RuntimeException e) {   // SecurityException if access was removed a moment ago
+            Log.w(Config.HEALTH_TAG, "read meals failed", e);
+            main.execute(() -> cb.onResult(new ArrayList<>(), e.toString()));
         }
     }
 

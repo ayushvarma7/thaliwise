@@ -144,3 +144,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 10.0 Specs: DONE - docs/USER_STORIES.md (personas, profiling, stories, storyboard) and docs/phase10/ step files committed before execution.
 - 10.1 Food knowledge: DONE - food-first prompt with Cuisine line, AnswerParser cuisine, 12-field table with 300 rows across 15+ cuisines and US chains, cuisine- and favorite-aware FoodMatcher; :core:test 15 classes pass.
 - 10.2 Profile and diary core: DONE - UserProfile, ProfileMath (Mifflin-St Jeor budget, goal adjust, floor, step goal, units), MealEntry, Diary; ProfileMathTest 6/6, DiaryTest 3/3; 17 core classes; android-free.
+- 10.3 App data: DONE - AppPrefs profile/budget/units/onboarded, HealthConnectRepository.readMeals + slotFromMealType, IdentifyResult.cuisine; :core:test and :app:compileDebugJavaWithJavac exit 0.
