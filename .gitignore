@@ -1,0 +1,11 @@
+.gradle/
+build/
+.cxx/
+app/.cxx/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+*.gguf
+.toolchain/
