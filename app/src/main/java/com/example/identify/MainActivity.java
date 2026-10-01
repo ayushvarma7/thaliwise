@@ -30,8 +30,8 @@ public class MainActivity extends AppCompatActivity {
         navController = navHost.getNavController();
 
         Set<Integer> topLevel = new HashSet<>();
-        topLevel.add(R.id.cameraFragment);
-        topLevel.add(R.id.historyFragment);
+        topLevel.add(R.id.todayFragment);
+        topLevel.add(R.id.diaryFragment);
         topLevel.add(R.id.settingsFragment);
         appBarConfiguration = new AppBarConfiguration.Builder(topLevel).build();
 

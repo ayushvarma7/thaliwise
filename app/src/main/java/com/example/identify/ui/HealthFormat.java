@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.example.identify.R;
 import com.example.identify.core.Meals;
+import com.example.identify.core.UserProfile;
 
 import java.util.Locale;
 
@@ -17,6 +18,16 @@ final class HealthFormat {
 
     static String kcal(Context ctx, double v) {
         return Double.isNaN(v) ? ctx.getString(R.string.health_no_data) : String.format(Locale.getDefault(), "%,.0f", v);
+    }
+
+    static String goal(Context ctx, UserProfile.Goal goal) {
+        switch (goal) {
+            case LOSE: return ctx.getString(R.string.goal_lose);
+            case MAINTAIN: return ctx.getString(R.string.goal_maintain);
+            case GAIN: return ctx.getString(R.string.goal_gain);
+            case EAT_HEALTHIER: return ctx.getString(R.string.goal_eat_healthier);
+            default: return ctx.getString(R.string.goal_track);
+        }
     }
 
     static String slot(Context ctx, Meals.Slot slot) {

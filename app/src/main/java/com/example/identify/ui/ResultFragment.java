@@ -4,7 +4,6 @@ import android.content.Context;
 import android.health.connect.HealthPermissions;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,11 +37,16 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * One photo: the dish and its cuisine, the calories for one serving, and logging the meal. Logging also
+ * teaches the memory once per photo: the guessed food is saved as an accept, any other food as a correction.
+ */
 public class ResultFragment extends Fragment {
 
     private static final String KEY_DETAILS_OPEN = "detailsOpen";
     private static final String KEY_MEAL_RECORD_ID = "mealRecordId";
     private static final String KEY_MEAL_SUMMARY = "mealSummary";
+    private static final String KEY_FEEDBACK_SAVED = "feedbackSaved";
 
     private FragmentResultBinding binding;
     private ResultViewModel vm;
@@ -50,6 +54,7 @@ public class ResultFragment extends Fragment {
     /** Health Connect id of the meal logged from this screen, kept so Undo can delete it. */
     private String loggedRecordId;
     private String loggedSummary;
+    private boolean feedbackSaved;
 
     @Nullable
     @Override
@@ -66,6 +71,7 @@ public class ResultFragment extends Fragment {
             detailsOpen = savedInstanceState.getBoolean(KEY_DETAILS_OPEN);
             loggedRecordId = savedInstanceState.getString(KEY_MEAL_RECORD_ID);
             loggedSummary = savedInstanceState.getString(KEY_MEAL_SUMMARY);
+            feedbackSaved = savedInstanceState.getBoolean(KEY_FEEDBACK_SAVED);
         }
         vm = new ViewModelProvider(this).get(ResultViewModel.class);
         String path = requireArguments().getString("imagePath");
@@ -79,46 +85,23 @@ public class ResultFragment extends Fragment {
 
         vm.getStage().observe(getViewLifecycleOwner(), this::renderStage);
         vm.getResult().observe(getViewLifecycleOwner(), r -> renderResult());
+        // Feedback rows are saved quietly in the background; the user leaves with Done.
         vm.getSaved().observe(getViewLifecycleOwner(), saved -> {
-            if (!Boolean.TRUE.equals(saved)) return;
-            vm.consumeSaved();
-            NavController nav = NavHostFragment.findNavController(this);
-            NavDestination current = nav.getCurrentDestination();
-            if (current != null && current.getId() == R.id.resultFragment) {
-                nav.navigate(R.id.action_result_to_history);
-            }
+            if (Boolean.TRUE.equals(saved)) vm.consumeSaved();
         });
 
-        binding.acceptButton.setOnClickListener(v -> {
-            binding.acceptButton.setEnabled(false);
-            binding.saveCorrectionButton.setEnabled(false);
-            vm.accept();
-        });
-        binding.correctButton.setOnClickListener(v -> {
-            binding.correctionInputLayout.setVisibility(View.VISIBLE);
-            binding.saveCorrectionButton.setVisibility(View.VISIBLE);
-            binding.correctionInput.requestFocus();
-        });
-        binding.saveCorrectionButton.setOnClickListener(v -> {
-            Editable editable = binding.correctionInput.getText();
-            String text = editable == null ? "" : editable.toString();
-            if (text.trim().isEmpty()) {
-                binding.correctionInputLayout.setError(getString(R.string.correction_empty));
-                return;
-            }
-            binding.correctionInputLayout.setError(null);
-            binding.saveCorrectionButton.setEnabled(false);
-            binding.acceptButton.setEnabled(false);
-            vm.submitCorrection(text);
-        });
+        binding.logMealButton.setOnClickListener(v -> openMealDialog(currentLabel()));
+        binding.otherFoodButton.setOnClickListener(v -> openMealDialog(""));
+        binding.nameFoodButton.setOnClickListener(v -> openMealDialog(""));
+        binding.retakeButton.setOnClickListener(v -> NavHostFragment.findNavController(this).popBackStack());
+        binding.doneButton.setOnClickListener(v -> goToday());
+        binding.undoMealButton.setOnClickListener(v -> onUndoMealClicked());
         binding.runModelButton.setOnClickListener(v -> vm.runModelAnyway());
         binding.retryButton.setOnClickListener(v -> vm.retry());
         binding.detailsButton.setOnClickListener(v -> {
             detailsOpen = !detailsOpen;
             renderResult();
         });
-        binding.logMealButton.setOnClickListener(v -> onLogMealClicked());
-        binding.undoMealButton.setOnClickListener(v -> onUndoMealClicked());
     }
 
     @Override
@@ -127,6 +110,7 @@ public class ResultFragment extends Fragment {
         outState.putBoolean(KEY_DETAILS_OPEN, detailsOpen);
         outState.putString(KEY_MEAL_RECORD_ID, loggedRecordId);
         outState.putString(KEY_MEAL_SUMMARY, loggedSummary);
+        outState.putBoolean(KEY_FEEDBACK_SAVED, feedbackSaved);
     }
 
     @Override
@@ -145,70 +129,54 @@ public class ResultFragment extends Fragment {
 
     private void renderStage(ResultViewModel.Stage stage) {
         if (binding == null || stage == null) return;
-        keepScreenOn(stage == ResultViewModel.Stage.LOADING_MODEL
+        boolean working = stage == ResultViewModel.Stage.LOADING_MODEL
                 || stage == ResultViewModel.Stage.EMBEDDING
-                || stage == ResultViewModel.Stage.GENERATING);
-        switch (stage) {
-            case IDLE:
-            case LOADING_MODEL:
-            case EMBEDDING:
-            case GENERATING:
-                binding.progressContainer.setVisibility(View.VISIBLE);
-                binding.progressText.setText(stage == ResultViewModel.Stage.EMBEDDING
-                        ? R.string.stage_embedding
-                        : stage == ResultViewModel.Stage.GENERATING
-                                ? R.string.stage_generating
-                                : R.string.stage_loading_model);
-                binding.resultCard.setVisibility(View.GONE);
-                binding.actionRow.setVisibility(View.GONE);
-                binding.sourceText.setVisibility(View.GONE);
-                binding.runModelButton.setVisibility(View.GONE);
-                binding.retryButton.setVisibility(View.GONE);
-                binding.detailsButton.setVisibility(View.GONE);
-                binding.detailsText.setVisibility(View.GONE);
-                binding.foodCard.setVisibility(View.GONE);
-                hideCorrectionViews();
-                break;
-            case DONE:
-                binding.progressContainer.setVisibility(View.GONE);
-                binding.retryButton.setVisibility(View.GONE);
-                binding.resultCard.setVisibility(View.VISIBLE);
-                binding.actionRow.setVisibility(View.VISIBLE);
-                binding.sourceText.setVisibility(View.VISIBLE);
-                renderResult();
-                break;
-            case ERROR:
-                binding.progressContainer.setVisibility(View.GONE);
-                binding.actionRow.setVisibility(View.GONE);
-                binding.sourceText.setVisibility(View.GONE);
-                binding.runModelButton.setVisibility(View.GONE);
-                binding.detailsButton.setVisibility(View.GONE);
-                binding.detailsText.setVisibility(View.GONE);
-                binding.foodCard.setVisibility(View.GONE);
-                hideCorrectionViews();
-                binding.resultCard.setVisibility(View.VISIBLE);
-                binding.labelText.setText("Error");
-                String msg = vm.getError().getValue();
-                binding.descriptionText.setText(msg == null ? "" : msg);
-                binding.descriptionText.setVisibility(View.VISIBLE);
-                binding.retryButton.setVisibility(View.VISIBLE);
-                break;
+                || stage == ResultViewModel.Stage.GENERATING;
+        keepScreenOn(working);
+        boolean running = working || stage == ResultViewModel.Stage.IDLE;
+        boolean done = stage == ResultViewModel.Stage.DONE;
+        boolean failed = stage == ResultViewModel.Stage.ERROR;
+        binding.progressContainer.setVisibility(running ? View.VISIBLE : View.GONE);
+        if (running) {
+            binding.progressText.setText(stage == ResultViewModel.Stage.EMBEDDING
+                    ? R.string.stage_embedding
+                    : stage == ResultViewModel.Stage.GENERATING
+                            ? R.string.stage_generating
+                            : R.string.stage_loading_model);
         }
+        binding.resultBlock.setVisibility(done ? View.VISIBLE : View.GONE);
+        binding.errorText.setVisibility(failed ? View.VISIBLE : View.GONE);
+        binding.retryButton.setVisibility(failed ? View.VISIBLE : View.GONE);
+        if (!done) {
+            binding.kcalCard.setVisibility(View.GONE);
+            binding.noFoodCard.setVisibility(View.GONE);
+            binding.loggedCard.setVisibility(View.GONE);
+            binding.runModelButton.setVisibility(View.GONE);
+            binding.detailsButton.setVisibility(View.GONE);
+            binding.detailsText.setVisibility(View.GONE);
+        }
+        if (failed) {
+            String msg = vm.getError().getValue();
+            binding.errorText.setText(getString(R.string.result_error, msg == null ? "" : msg));
+        }
+        if (done) renderResult();
     }
 
-    /** Writes the current result into the card. Only while DONE, so an error message is never overwritten. */
+    /** Writes the current result into the screen. Only while DONE, so an error message is never overwritten. */
     private void renderResult() {
         if (binding == null || vm.getStage().getValue() != ResultViewModel.Stage.DONE) return;
         ResultViewModel.IdentifyResult r = vm.getResult().getValue();
         if (r == null) return;
         binding.labelText.setText(r.label);
+        binding.cuisineChip.setVisibility(r.cuisine.isEmpty() ? View.GONE : View.VISIBLE);
+        binding.cuisineChip.setText(r.cuisine);
         binding.descriptionText.setText(r.description);
         binding.descriptionText.setVisibility(r.description == null || r.description.isEmpty() ? View.GONE : View.VISIBLE);
         boolean fromMemory = Config.SOURCE_MEMORY.equals(r.source);
         binding.sourceText.setText(fromMemory
                 ? getString(R.string.source_memory, r.latencyMs / 1000f, r.nearestScore)
                 : getString(R.string.source_model, r.latencyMs / 1000f));
-        binding.runModelButton.setVisibility(fromMemory ? View.VISIBLE : View.GONE);
+        binding.runModelButton.setVisibility(fromMemory && loggedRecordId == null ? View.VISIBLE : View.GONE);
         boolean hasDetails = r.details != null && !r.details.isEmpty();
         binding.detailsButton.setVisibility(hasDetails ? View.VISIBLE : View.GONE);
         binding.detailsButton.setText(detailsOpen ? R.string.hide_details : R.string.show_details);
@@ -217,32 +185,48 @@ public class ResultFragment extends Fragment {
         renderFood(r);
     }
 
-    /** The food card: shown when the label matches the nutrition table, or after a meal was logged here. */
+    /** kcal card for a table match, "no food" card otherwise, or the "logged" card after logging. */
     private void renderFood(ResultViewModel.IdentifyResult r) {
         if (loggedRecordId != null) {
-            binding.foodCard.setVisibility(View.VISIBLE);
-            binding.foodText.setText(loggedSummary);
-            binding.logMealButton.setVisibility(View.GONE);
-            binding.undoMealButton.setVisibility(View.VISIBLE);
+            binding.kcalCard.setVisibility(View.GONE);
+            binding.noFoodCard.setVisibility(View.GONE);
+            binding.loggedCard.setVisibility(View.VISIBLE);
+            binding.loggedText.setText(loggedSummary);
             binding.undoMealButton.setEnabled(true);
             return;
         }
-        List<FoodMatcher.Match> matches = FoodMatcher.match(r.label, FoodRepository.foods(requireContext()), 1);
-        if (matches.isEmpty()) {
-            binding.foodCard.setVisibility(View.GONE);
+        binding.loggedCard.setVisibility(View.GONE);
+        FoodItem top = topMatch(r);
+        if (top == null) {
+            binding.kcalCard.setVisibility(View.GONE);
+            binding.noFoodCard.setVisibility(View.VISIBLE);
+            binding.noFoodText.setText(getString(R.string.no_food_text, r.label));
             return;
         }
-        FoodItem top = matches.get(0).item;
-        binding.foodCard.setVisibility(View.VISIBLE);
-        binding.foodText.setText(getString(R.string.food_detected, top.displayName(),
-                HealthFormat.kcal(requireContext(), top.kcal), top.serving));
-        binding.foodStatusText.setVisibility(View.GONE);
-        binding.logMealButton.setVisibility(View.VISIBLE);
+        Context ctx = requireContext();
+        binding.noFoodCard.setVisibility(View.GONE);
+        binding.kcalCard.setVisibility(View.VISIBLE);
+        binding.kcalValueText.setText(HealthFormat.kcal(ctx, top.kcal));
+        binding.kcalUnitText.setText(getString(R.string.kcal_unit_per_serving, top.serving));
+        binding.foodMatchText.setText(getString(R.string.food_match_format, top.displayName(), top.cuisine));
         binding.logMealButton.setEnabled(true);
-        binding.undoMealButton.setVisibility(View.GONE);
+        binding.logMealButton.setText(R.string.log_meal_button);
     }
 
-    private void onLogMealClicked() {
+    /** Best table row for the model's label, using its cuisine and the user's favorite cuisines. */
+    private FoodItem topMatch(ResultViewModel.IdentifyResult r) {
+        Context ctx = requireContext();
+        List<FoodMatcher.Match> m = FoodMatcher.match(r.label, r.cuisine, AppPrefs.get(ctx).getProfile().cuisines,
+                FoodRepository.foods(ctx), 1);
+        return m.isEmpty() ? null : m.get(0).item;
+    }
+
+    private String currentLabel() {
+        ResultViewModel.IdentifyResult r = vm.getResult().getValue();
+        return r == null ? "" : r.label;
+    }
+
+    private void openMealDialog(String query) {
         ResultViewModel.IdentifyResult r = vm.getResult().getValue();
         if (r == null || binding == null) return;
         Context ctx = requireContext();
@@ -254,11 +238,11 @@ public class ResultFragment extends Fragment {
                     .show();
             return;
         }
-        LogMealDialog.show(this, r.label,
-                (food, portion, kcal, kcalEdited, query) -> logMeal(r, food, portion, kcal, kcalEdited, query));
+        LogMealDialog.show(this, query,
+                (food, portion, kcal, kcalEdited, q) -> logMeal(r, food, portion, kcal, kcalEdited, q));
     }
 
-    /** Writes the meal to Health Connect, logs a meal_logged event, then shows today's totals. */
+    /** Writes the meal to Health Connect, saves the feedback once, logs meal_logged, then shows today's totals. */
     private void logMeal(ResultViewModel.IdentifyResult r, FoodItem food, double portion, double kcal,
                          boolean kcalEdited, String query) {
         if (binding == null) return;
@@ -269,15 +253,16 @@ public class ResultFragment extends Fragment {
         final double fat = Meals.scaled(food.fatG, portion);
         final long t0 = SystemClock.elapsedRealtime();
         binding.logMealButton.setEnabled(false);
-        binding.foodStatusText.setVisibility(View.VISIBLE);
-        binding.foodStatusText.setText(R.string.meal_logging);
+        binding.logMealButton.setText(R.string.meal_logging);
         HealthConnectRepository.insertMeal(app, food.name, kcal, protein, carbs, fat, slot, (recordId, error) -> {
             JSONObject e = ExperimentLog.event("meal_logged");
             ExperimentLog.put(e, "run_id", r.runId);
             ExperimentLog.put(e, "model_label", r.label);
+            ExperimentLog.put(e, "model_cuisine", r.cuisine);
             ExperimentLog.put(e, "query", query);
             ExperimentLog.put(e, "food_id", food.id);
             ExperimentLog.put(e, "food_name", food.displayName());
+            ExperimentLog.put(e, "food_cuisine", food.cuisine);
             ExperimentLog.put(e, "portion", portion);
             ExperimentLog.put(e, "kcal_logged", kcal);
             ExperimentLog.put(e, "kcal_table", food.kcal * portion);
@@ -293,16 +278,26 @@ public class ResultFragment extends Fragment {
             if (binding == null || !isAdded()) return;
             if (error != null) {
                 binding.logMealButton.setEnabled(true);
-                binding.foodStatusText.setVisibility(View.GONE);
+                binding.logMealButton.setText(R.string.log_meal_button);
                 Snackbar.make(binding.getRoot(), getString(R.string.meal_log_failed, error), Snackbar.LENGTH_LONG).show();
                 return;
             }
             loggedRecordId = recordId;
             loggedSummary = getString(R.string.meal_logged, HealthFormat.kcal(app, kcal), food.displayName(),
                     HealthFormat.slot(app, slot));
-            renderFood(r);
+            saveFeedback(r, food);
+            renderResult();
             showToday();
         });
+    }
+
+    /** Once per photo: the guessed food is an accept, any other food a correction (US-3.5). */
+    private void saveFeedback(ResultViewModel.IdentifyResult r, FoodItem food) {
+        if (feedbackSaved) return;
+        feedbackSaved = true;
+        FoodItem guess = topMatch(r);
+        if (guess != null && guess.id.equals(food.id)) vm.accept();
+        else vm.submitCorrection(food.name);
     }
 
     /** Today's eaten, burned, and step totals under the logged meal. */
@@ -311,8 +306,8 @@ public class ResultFragment extends Fragment {
         final long goal = AppPrefs.get(app).getStepGoal();
         HealthConnectRepository.readToday(app, (today, error) -> {
             if (binding == null || !isAdded() || today == null) return;
-            binding.foodStatusText.setVisibility(View.VISIBLE);
-            binding.foodStatusText.setText(getString(R.string.meal_today_summary,
+            binding.todaySummaryText.setVisibility(View.VISIBLE);
+            binding.todaySummaryText.setText(getString(R.string.meal_today_summary,
                     HealthFormat.kcal(app, today.eatenKcal), HealthFormat.kcal(app, today.burnedKcal),
                     HealthFormat.steps(app, today.steps), HealthFormat.steps(app, goal)));
         });
@@ -336,14 +331,15 @@ public class ResultFragment extends Fragment {
             }
             loggedRecordId = null;
             loggedSummary = null;
+            binding.todaySummaryText.setVisibility(View.GONE);
             Snackbar.make(binding.getRoot(), R.string.meal_undone, Snackbar.LENGTH_LONG).show();
-            ResultViewModel.IdentifyResult r = vm.getResult().getValue();
-            if (r != null) renderFood(r);
+            renderResult();
         });
     }
 
-    private void hideCorrectionViews() {
-        binding.correctionInputLayout.setVisibility(View.GONE);
-        binding.saveCorrectionButton.setVisibility(View.GONE);
+    private void goToday() {
+        NavController nav = NavHostFragment.findNavController(this);
+        NavDestination current = nav.getCurrentDestination();
+        if (current != null && current.getId() == R.id.resultFragment) nav.navigate(R.id.action_result_to_today);
     }
 }

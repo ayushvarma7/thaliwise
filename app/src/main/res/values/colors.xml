@@ -1,7 +1,4 @@
 <resources>
-    <color name="accept_green">#2E7D32</color>
-    <color name="correct_amber">#FF8F00</color>
-
     <color name="brand_green">#2E7D32</color>
     <color name="on_brand_green">#FFFFFF</color>
     <color name="brand_green_container">#C8E6C9</color>

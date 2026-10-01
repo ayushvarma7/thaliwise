@@ -2,7 +2,16 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/cameraFragment">
+    app:startDestination="@id/todayFragment">
+
+    <fragment
+        android:id="@+id/todayFragment"
+        android:name="com.example.identify.ui.TodayFragment"
+        android:label="@string/title_today">
+        <action
+            android:id="@+id/action_today_to_camera"
+            app:destination="@id/cameraFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/cameraFragment"
@@ -21,11 +30,16 @@
             android:name="imagePath"
             app:argType="string" />
         <action
-            android:id="@+id/action_result_to_history"
-            app:destination="@id/historyFragment"
-            app:popUpTo="@id/cameraFragment"
-            app:popUpToInclusive="false" />
+            android:id="@+id/action_result_to_today"
+            app:destination="@id/todayFragment"
+            app:popUpTo="@id/todayFragment"
+            app:popUpToInclusive="true" />
     </fragment>
+
+    <fragment
+        android:id="@+id/diaryFragment"
+        android:name="com.example.identify.ui.DiaryFragment"
+        android:label="@string/title_diary" />
 
     <fragment
         android:id="@+id/historyFragment"
