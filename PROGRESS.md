@@ -112,3 +112,7 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - Model answered "mouse" (no Label/Description lines; parser fallback used). Label confidence 0.245, other starts Computer 0.16, The 0.15, Apple 0.14, Mouse 0.14. User accepted after 51.7 s; feedback event linked by run_id.
 - Previous exits read from Android: the 15:23 restart was user_requested (swiped away) at RSS 1.5 GB, not a crash.
 - Fixes after reading this run: battery energy now requires no external power (the phone was plugged in although isCharging() reported false under load) and is sign-agnostic; llama_perf timings enabled (no_perf = false). 45 core tests pass, lint 0 errors, reinstalled.
+
+## Phase 8: Health Connect
+
+- 8.0 Preflight: DONE - working tree clean except the new build prompt, last commit cbc0e5a, :core:test and :app:assembleDebug exit 0.
