@@ -117,3 +117,5 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 
 - 8.0 Preflight: DONE - working tree clean except the new build prompt, last commit cbc0e5a, :core:test and :app:assembleDebug exit 0.
 - 8.1 Raise minSdk to 34: DONE - minSdk = 34, appVersion() uses PackageInfoFlags only, unused android.os.Build import removed, :app:assembleDebug exit 0.
+- 8.2 Manifest: DONE - 5 android.permission.health entries, PrivacyPolicyActivity plus ViewPermissionUsageActivity alias (VIEW_PERMISSION_USAGE / HEALTH_PERMISSIONS / START_VIEW_PERMISSION_USAGE); no other permission added.
+- 8.6 Privacy policy screen: DONE - activity_privacy_policy.xml and PrivacyPolicyActivity added, privacy_title and privacy_policy_text strings added; :app:assembleDebug exit 0.
