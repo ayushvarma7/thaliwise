@@ -5,6 +5,7 @@ import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,8 +24,11 @@ import java.io.File;
 
 public class ResultFragment extends Fragment {
 
+    private static final String KEY_DETAILS_OPEN = "detailsOpen";
+
     private FragmentResultBinding binding;
     private ResultViewModel vm;
+    private boolean detailsOpen;
 
     @Nullable
     @Override
@@ -37,6 +41,7 @@ public class ResultFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (savedInstanceState != null) detailsOpen = savedInstanceState.getBoolean(KEY_DETAILS_OPEN);
         vm = new ViewModelProvider(this).get(ResultViewModel.class);
         String path = requireArguments().getString("imagePath");
         if (path == null) {
@@ -83,16 +88,37 @@ public class ResultFragment extends Fragment {
         });
         binding.runModelButton.setOnClickListener(v -> vm.runModelAnyway());
         binding.retryButton.setOnClickListener(v -> vm.retry());
+        binding.detailsButton.setOnClickListener(v -> {
+            detailsOpen = !detailsOpen;
+            renderResult();
+        });
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(KEY_DETAILS_OPEN, detailsOpen);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        keepScreenOn(false);
         binding = null;
+    }
+
+    /** A run takes many seconds; if the screen turns off, Android moves the work to slow background cores. */
+    private void keepScreenOn(boolean on) {
+        if (getActivity() == null) return;
+        if (on) getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private void renderStage(ResultViewModel.Stage stage) {
         if (binding == null || stage == null) return;
+        keepScreenOn(stage == ResultViewModel.Stage.LOADING_MODEL
+                || stage == ResultViewModel.Stage.EMBEDDING
+                || stage == ResultViewModel.Stage.GENERATING);
         switch (stage) {
             case IDLE:
             case LOADING_MODEL:
@@ -109,6 +135,8 @@ public class ResultFragment extends Fragment {
                 binding.sourceText.setVisibility(View.GONE);
                 binding.runModelButton.setVisibility(View.GONE);
                 binding.retryButton.setVisibility(View.GONE);
+                binding.detailsButton.setVisibility(View.GONE);
+                binding.detailsText.setVisibility(View.GONE);
                 hideCorrectionViews();
                 break;
             case DONE:
@@ -124,6 +152,8 @@ public class ResultFragment extends Fragment {
                 binding.actionRow.setVisibility(View.GONE);
                 binding.sourceText.setVisibility(View.GONE);
                 binding.runModelButton.setVisibility(View.GONE);
+                binding.detailsButton.setVisibility(View.GONE);
+                binding.detailsText.setVisibility(View.GONE);
                 hideCorrectionViews();
                 binding.resultCard.setVisibility(View.VISIBLE);
                 binding.labelText.setText("Error");
@@ -148,6 +178,11 @@ public class ResultFragment extends Fragment {
                 ? getString(R.string.source_memory, r.latencyMs / 1000f, r.nearestScore)
                 : getString(R.string.source_model, r.latencyMs / 1000f));
         binding.runModelButton.setVisibility(fromMemory ? View.VISIBLE : View.GONE);
+        boolean hasDetails = r.details != null && !r.details.isEmpty();
+        binding.detailsButton.setVisibility(hasDetails ? View.VISIBLE : View.GONE);
+        binding.detailsButton.setText(detailsOpen ? R.string.hide_details : R.string.show_details);
+        binding.detailsText.setText(r.details);
+        binding.detailsText.setVisibility(hasDetails && detailsOpen ? View.VISIBLE : View.GONE);
     }
 
     private void hideCorrectionViews() {

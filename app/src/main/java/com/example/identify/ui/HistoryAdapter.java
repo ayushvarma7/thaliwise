@@ -67,6 +67,9 @@ public class HistoryAdapter extends ListAdapter<CorrectionEntity, HistoryAdapter
                 : ctx.getString(R.string.history_corrected, e.predictedLabel, e.userCorrection));
         String time = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(new Date(e.timestampMillis));
+        if (e.latencyMs > 0) {
+            time = time + " · " + ctx.getString(R.string.history_latency, e.latencyMs / 1000f);
+        }
         if (Config.SOURCE_MEMORY.equals(e.source)) {
             time = time + " · " + ctx.getString(R.string.history_from_memory);
         }

@@ -113,6 +113,73 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:text="@string/performance_title"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <TextView
+            android:id="@+id/threads_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/threads_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:value="4"
+            android:valueFrom="1"
+            android:valueTo="8" />
+
+        <TextView
+            android:id="@+id/image_tokens_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/image_tokens_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="32"
+            android:value="256"
+            android:valueFrom="64"
+            android:valueTo="256" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/performance_note"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/telemetry_title"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <TextView
+            android:id="@+id/live_telemetry_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:id="@+id/experiment_log_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
             android:text="@string/stats_title"
             android:textAppearance="?attr/textAppearanceTitleMedium" />
 

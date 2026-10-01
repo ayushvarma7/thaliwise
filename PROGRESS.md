@@ -90,3 +90,17 @@ Phase 6: DONE - README written with all 9 sections, no invented numbers.
 - Note for later: tapping Take photo logs `Implicit URI write grant for ImageCapture action will be discontinued from Android 18 onwards`. Works on Android 17; Android 18 will need an explicit grant on the camera intent.
 
 Phase 7: automated part DONE; manual checklist handed to the user, timings pending.
+
+## Changes after the spec (user requests, 2026-10-01)
+
+Requested during the on-device test: the first identification on the Pixel 8 was extremely slow; add experiment tracking (time to infer, how close the other possible answers were) and CPU / telemetry metrics.
+
+- Speed: the logs showed a 771x1024 photo split into 6 tiles + thumbnail, 17.8 to 54.4 s per tile encode, plus a separate embedding encode. Now the model gets a 512 px copy (one tile) and the vision encoder runs once per photo; the generation reuses that encoding. MODEL_ID gained the suffix `+emb2` because embeddings are now pooled from that shared encoding. The screen stays on during a run so Android does not move the work to background cores.
+- Settings > Performance: CPU threads (1 to 8, default 4) and vision tokens per image (64 to 256, default 256). A change reloads the model on the next identification.
+- Experiment log: experiments/experiment_log.jsonl in the app's external files dir, one JSON event per line (app_start with previous process exit reasons, image_prepare, run, feedback, setting_change, download events, model_unload, model_delete, trim_memory). Cleared by Clear history and memory.
+- Telemetry per run: per-phase wall and CPU time, average and peak busy cores, CPU time by core type (from /proc/self/task and cpufreq), memory peaks, battery current, energy and temperature, thermal status and headroom. Settings shows live readings.
+- Model alternatives: native code records each generated token's probability and its top 5 rivals; :core GenerationAnalysis turns that into label confidence and alternative label starts. kNN logs the 5 nearest saved photos.
+- New :core classes GenerationAnalysis and TelemetryStats with tests. `./gradlew :core:test`: 9 test classes, 44 tests, 0 failures.
+- `./gradlew :app:assembleDebug`: BUILD SUCCESSFUL. `:app:lintDebug`: 0 errors, 23 warnings (the 19 from Phase 4 plus PluralsCandidate x2, UsableSpace for the new download_start event, and one DiscouragedApi that was then fixed by switching the sampler to scheduleWithFixedDelay).
+- libvlm-bridge.so now exports 6 JNI symbols (adds nativeGetLastStats). Native changes are listed in NATIVE_API_NOTES.md items 6 to 11.
+- Compliance checks 1 to 10 rerun: all pass (check 6 with .toolchain excluded, as before).

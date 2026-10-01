@@ -10,6 +10,8 @@ public final class AppPrefs {
     private static final String KEY_KNN_THRESHOLD = "knn_threshold";
     private static final String KEY_DL_MODEL_ID = "dl_model_id";
     private static final String KEY_DL_MMPROJ_ID = "dl_mmproj_id";
+    private static final String KEY_N_THREADS = "n_threads";
+    private static final String KEY_IMAGE_MAX_TOKENS = "image_max_tokens";
 
     private static volatile AppPrefs instance;
 
@@ -47,4 +49,21 @@ public final class AppPrefs {
     public long getMmprojDownloadId() { return prefs.getLong(KEY_DL_MMPROJ_ID, -1L); }
 
     public void setMmprojDownloadId(long id) { prefs.edit().putLong(KEY_DL_MMPROJ_ID, id).apply(); }
+
+    /** CPU threads for the model. A change reloads the model on the next identification. */
+    public int getThreads() {
+        return clamp(prefs.getInt(KEY_N_THREADS, Config.N_THREADS), Config.MIN_THREADS, Config.MAX_THREADS);
+    }
+
+    public void setThreads(int threads) { prefs.edit().putInt(KEY_N_THREADS, threads).apply(); }
+
+    /** Vision token cap per image. A change reloads the model on the next identification. */
+    public int getImageMaxTokens() {
+        return clamp(prefs.getInt(KEY_IMAGE_MAX_TOKENS, Config.DEFAULT_IMAGE_MAX_TOKENS),
+                Config.MIN_IMAGE_MAX_TOKENS, Config.MAX_IMAGE_MAX_TOKENS);
+    }
+
+    public void setImageMaxTokens(int tokens) { prefs.edit().putInt(KEY_IMAGE_MAX_TOKENS, tokens).apply(); }
+
+    private static int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
 }

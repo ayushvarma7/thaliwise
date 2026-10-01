@@ -23,8 +23,11 @@ import com.example.identify.Config;
 import com.example.identify.R;
 import com.example.identify.databinding.FragmentCameraBinding;
 import com.example.identify.model.ModelDownloader;
+import com.example.identify.util.ExperimentLog;
 import com.example.identify.util.ImageUtil;
 import com.google.android.material.snackbar.Snackbar;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,10 +53,10 @@ public class CameraFragment extends Fragment {
             if (uri != null) captureUri = Uri.parse(uri);
         }
         takePicture = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
-            if (Boolean.TRUE.equals(success) && captureUri != null) prepare(captureUri);
+            if (Boolean.TRUE.equals(success) && captureUri != null) prepare(captureUri, "camera");
         });
         pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-            if (uri != null) prepare(uri);
+            if (uri != null) prepare(uri, "gallery");
         });
     }
 
@@ -114,16 +117,30 @@ public class CameraFragment extends Fragment {
         takePicture.launch(captureUri);
     }
 
-    private void prepare(Uri uri) {
+    private void prepare(Uri uri, String source) {
         if (binding != null) binding.prepareProgress.setVisibility(View.VISIBLE);
         final Context app = requireContext().getApplicationContext();
         App.runOnIoThread(() -> {
+            JSONObject event = ExperimentLog.event("image_prepare");
+            ExperimentLog.put(event, "source", source);
             File prepared = null;
             try {
-                prepared = ImageUtil.prepareForModel(app, uri);
+                ImageUtil.PreparedImage p = ImageUtil.prepareForModel(app, uri);
+                prepared = p.file;
+                ExperimentLog.put(event, "image_file", p.file.getName());
+                ExperimentLog.put(event, "source_w", p.sourceWidth);
+                ExperimentLog.put(event, "source_h", p.sourceHeight);
+                ExperimentLog.put(event, "sample_size", p.sampleSize);
+                ExperimentLog.put(event, "rotation", p.rotationDegrees);
+                ExperimentLog.put(event, "w", p.width);
+                ExperimentLog.put(event, "h", p.height);
+                ExperimentLog.put(event, "bytes", p.bytes);
+                ExperimentLog.put(event, "ms", p.elapsedMs);
             } catch (IOException | RuntimeException e) {
-                Log.w(Config.LOG_TAG, "image prepare failed", e);
+                Log.w(Config.LOG_TAG, "image prepare failed source=" + source, e);
+                ExperimentLog.put(event, "error", String.valueOf(e.getMessage()));
             }
+            ExperimentLog.append(app, event);
             final File result = prepared;
             App.runOnMainThread(() -> {
                 if (!isAdded() || binding == null) return;

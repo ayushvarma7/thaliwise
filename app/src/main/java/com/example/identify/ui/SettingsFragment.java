@@ -16,7 +16,10 @@ import com.example.identify.R;
 import com.example.identify.databinding.FragmentSettingsBinding;
 import com.example.identify.model.ModelDownloader;
 import com.example.identify.model.VlmEngine;
+import com.example.identify.util.ExperimentLog;
+import com.example.identify.util.Telemetry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
 
 public class SettingsFragment extends Fragment {
@@ -50,7 +53,10 @@ public class SettingsFragment extends Fragment {
         binding.downloadProgress.setMax(1000);
 
         binding.memorySwitch.setChecked(prefs.isMemoryEnabled());
-        binding.memorySwitch.setOnCheckedChangeListener((button, checked) -> prefs.setMemoryEnabled(checked));
+        binding.memorySwitch.setOnCheckedChangeListener((button, checked) -> {
+            prefs.setMemoryEnabled(checked);
+            if (button.isPressed()) vm.logSettingChange("memory_enabled", checked);
+        });
 
         // Integer slider range on purpose: float step sizes crash Slider.
         int sliderValue = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, Math.round(prefs.getKnnThreshold() * 100)));
@@ -61,6 +67,25 @@ public class SettingsFragment extends Fragment {
             prefs.setKnnThreshold(threshold);
             updateThresholdLabel(threshold);
         });
+        binding.thresholdSlider.addOnSliderTouchListener(logOnRelease("knn_threshold", 0.01f));
+
+        int threads = prefs.getThreads();
+        binding.threadsSlider.setValue(threads);
+        binding.threadsLabel.setText(getString(R.string.threads_label, threads));
+        binding.threadsSlider.addOnChangeListener((slider, value, fromUser) -> {
+            prefs.setThreads((int) value);
+            binding.threadsLabel.setText(getString(R.string.threads_label, (int) value));
+        });
+        binding.threadsSlider.addOnSliderTouchListener(logOnRelease("n_threads", 1f));
+
+        int tokens = prefs.getImageMaxTokens();
+        binding.imageTokensSlider.setValue(snapTokens(tokens));
+        binding.imageTokensLabel.setText(getString(R.string.image_tokens_label, snapTokens(tokens)));
+        binding.imageTokensSlider.addOnChangeListener((slider, value, fromUser) -> {
+            prefs.setImageMaxTokens((int) value);
+            binding.imageTokensLabel.setText(getString(R.string.image_tokens_label, (int) value));
+        });
+        binding.imageTokensSlider.addOnSliderTouchListener(logOnRelease("image_max_tokens", 1f));
 
         binding.downloadButton.setOnClickListener(v -> {
             if (!vm.startDownload()) {
@@ -96,6 +121,7 @@ public class SettingsFragment extends Fragment {
             lastProgress = p;
             refreshUi();
         });
+        vm.getLive().observe(getViewLifecycleOwner(), this::renderLive);
         vm.getCount().observe(getViewLifecycleOwner(), n -> { total = n == null ? 0 : n; updateStats(); });
         vm.getCorrectionCount().observe(getViewLifecycleOwner(), n -> { corrections = n == null ? 0 : n; updateStats(); });
         vm.getMemoryHitCount().observe(getViewLifecycleOwner(), n -> { memoryHits = n == null ? 0 : n; updateStats(); });
@@ -167,6 +193,43 @@ public class SettingsFragment extends Fragment {
         binding.systemInfoText.setText(info == null || info.isEmpty()
                 ? getString(R.string.system_info_unavailable)
                 : info);
+        binding.experimentLogText.setText(getString(R.string.experiment_log_format,
+                (int) (ExperimentLog.sizeBytes(requireContext()) / 1024),
+                ExperimentLog.file(requireContext()).getAbsolutePath()));
+    }
+
+    private void renderLive(Telemetry.Live live) {
+        if (binding == null || live == null) return;
+        VlmEngine engine = VlmEngine.get();
+        String model = engine.isLoaded()
+                ? getString(R.string.loaded_model_format, engine.getLoadedThreads(), engine.getLoadedImageMaxTokens())
+                : getString(R.string.loaded_model_none);
+        String battery = getString(live.charging ? R.string.live_battery_charging : R.string.live_battery_discharging,
+                live.tempC);
+        binding.liveTelemetryText.setText(getString(R.string.live_telemetry_format,
+                (float) live.cores, (float) (100.0 * live.cores / live.nCpus), live.nCpus,
+                (int) live.rssMb, (int) live.hwmMb, battery, live.thermal, model));
+    }
+
+    /** Logs one setting_change event when the user lets go of a slider, not on every step of a drag. */
+    private Slider.OnSliderTouchListener logOnRelease(String key, float scale) {
+        return new Slider.OnSliderTouchListener() {
+            @Override
+            public void onStartTrackingTouch(@NonNull Slider slider) {}
+
+            @Override
+            public void onStopTrackingTouch(@NonNull Slider slider) {
+                float v = slider.getValue() * scale;
+                vm.logSettingChange(key, scale == 1f ? (Object) (int) v : (Object) (double) v);
+            }
+        };
+    }
+
+    private static int snapTokens(int tokens) {
+        int min = Config.MIN_IMAGE_MAX_TOKENS;
+        int step = 32;
+        int snapped = min + Math.round((tokens - min) / (float) step) * step;
+        return Math.max(min, Math.min(Config.MAX_IMAGE_MAX_TOKENS, snapped));
     }
 
     private void updateThresholdLabel(float threshold) {

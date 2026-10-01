@@ -57,16 +57,19 @@ adb push mmproj-LFM2.5-VL-1.6b-Q8_0.gguf /sdcard/Android/data/com.example.identi
 
 ```
 photo
-  -> private copy (EXIF fixed, 1024 px)
-  -> 512x512 crop
-  -> vision encoder
+  -> private copy (EXIF fixed, 1024 px, kept for history and later fine-tuning)
+  -> inference copy (longest side 512 px, so LFM2-VL encodes it as one tile)
+  -> vision encoder, run once per photo
   -> mean-pooled, L2-normalized embedding
   -> kNN over saved embeddings
        -> (score >= threshold) memory label
-       -> (else) few-shot prompt + VLM generation -> Label/Description parse
+       -> (else) few-shot prompt + VLM generation that reuses the same image encoding
+          -> Label/Description parse
   -> user accepts or corrects
-  -> Room row + in-memory cache
+  -> Room row + in-memory cache + experiment log
 ```
+
+Why the inference copy is 512 px: LFM2-VL splits any image larger than about 724x724 into 512x512 tiles plus a thumbnail, and each tile is a full vision encoder pass. On the Pixel 8 CPU one pass took 18 to 54 s (see section 6), so a 1024 px photo (6 tiles + thumbnail) took minutes before the first word. One 512 px tile is one pass, and that single encoding now serves both the memory lookup and the answer.
 
 The app adapts to the user through two layers. Neither changes the model.
 
@@ -80,7 +83,7 @@ Module layout:
 
 ## 6. Performance on Pixel 8
 
-No numbers have been measured on a real device yet.
+First measurement, with the original pipeline (Pixel 8, Android 17, 4 threads, phone charging over USB): a 771x1024 photo was split into a 2x3 grid of 512x512 tiles plus a thumbnail. Each tile took 17.8 to 54.4 s to encode (`image slice encoded in` lines) and 3.3 to 10.3 s to decode into the language model (`image decoded` lines). The answer had not appeared after several minutes. That run led to the single-tile, encode-once pipeline in section 5. The current pipeline has not been timed on the device yet:
 
 | Step | Measured value | How measured |
 |---|---|---|
@@ -98,6 +101,8 @@ adb logcat -s Identify:I VlmBridge:I
 
 The memory path still runs the vision encoder to compute the embedding. It only skips text generation, so it is faster than the model path but not instant.
 
+Every run also writes its full timing breakdown, CPU use, memory, and battery numbers to the experiment log (section 10), and the result screen shows a summary under Show details.
+
 ## 7. What the app learns and what it does not
 
 - **Learns:** which labels this user prefers for things the model got wrong (through the prompt), and what this user's recurring objects look like (through stored embeddings).
@@ -110,7 +115,8 @@ The memory path still runs the vision encoder to compute the embedding. It only 
 - Mean-pooled projector outputs are not a trained retrieval embedding. Two different objects of the same kind (for example two different golden retrievers) may match each other.
 - Text-only few-shot corrections can bias the model toward a corrected label on unrelated photos.
 - CPU only. There is no Vulkan or OpenCL backend.
-- `N_THREADS = 4` is a starting point. Try 3, 4, and 5 and compare `gen_ms`.
+- `N_THREADS = 4` is a starting point. Settings > Performance changes the thread count (1 to 8) and the vision token cap (64 to 256); compare runs in the experiment log.
+- The vision encoder dominates the time on the CPU. Fewer vision tokens per image encode faster but see less detail.
 - The native code is compiled for `armv8.2-a+dotprod+i8mm+fp16` (the Pixel 8 Tensor G3 supports all of these). On an older arm64 CPU without i8mm, the app can crash when the model loads. Removing the `GGML_CPU_ARM_ARCH` line in `app/src/main/cpp/CMakeLists.txt` gives a more portable but slower build.
 
 ## 9. Pinned versions
@@ -126,3 +132,44 @@ The memory path still runs the vision encoder to compute the embedding. It only 
 | llama.cpp | tag `b11323`, commit `f11d642a27b921cf22b6a8beb1b899f960fedcde` |
 | Model file | `LFM2.5-VL-1.6B-Q4_0.gguf` |
 | Projector file | `mmproj-LFM2.5-VL-1.6b-Q8_0.gguf` |
+
+## 10. Experiment log and telemetry
+
+Every identification and every important app event is appended as one JSON object per line to:
+
+```
+/sdcard/Android/data/com.example.identify/files/experiments/experiment_log.jsonl
+```
+
+Pull it to the computer:
+
+```bash
+adb pull /sdcard/Android/data/com.example.identify/files/experiments/experiment_log.jsonl
+```
+
+Event types (field `type`):
+
+| Type | When | Main fields |
+|---|---|---|
+| `app_start` | process start | device, CPU core types, RAM, model files ready, `previous_exits` (why the last process ended: low_memory, crash_native, user_requested, ...) |
+| `image_prepare` | photo taken or picked | source (camera or gallery), source and output size, rotation, ms |
+| `run` | every identification, including errors | `run_id`, `config` (threads, vision tokens, sampling, threshold), `phases` (wall ms, CPU ms, cores per phase), `native_load`, `native_embed`, `native_generate` (per-stage ms, token counts, ttft, tokens/s, and for every generated token the chosen probability plus the 5 most likely tokens), `knn` (5 nearest saved photos with scores), `few_shot`, `system_prompt`, `raw_output`, `label_stats` (label confidence and the other label starts the model considered), `telemetry` |
+| `feedback` | Accept or Correct | `run_id`, accepted, correction, final label, time from result to decision |
+| `setting_change`, `download_start`, `download_state`, `model_unload`, `model_delete`, `trim_memory` | as named | the new value or state |
+
+`telemetry` in a run record:
+
+- `cpu`: CPU time of the whole app process (all threads), average and peak busy cores (CPU time divided by wall time), percent of the device's cores, and CPU time by core type (little, mid, big, from each core's maximum frequency; on the Pixel 8 that is 4x Cortex-A510, 4x Cortex-A715, 1x Cortex-X3) with each type's average clock. Android does not let apps read whole-device CPU use, so these numbers cover this app only.
+- `memory`: resident memory at start, end, and peak (the memory-mapped model files count in `rss_file`), native heap, device free memory, low-memory flag.
+- `battery`: level, temperature, average and peak current, and charge used in mAh. Current and energy are only meaningful on battery; while charging the record says so.
+- `thermal`: Android thermal status (none, light, moderate, severe, ...) and the lowest thermal headroom seen.
+
+Settings > Telemetry shows the same readings live once a second (CPU cores in use right now, memory, battery temperature, thermal status, which model settings are loaded) and the log's size and path.
+
+For fine-tuning later, join `run` and `feedback` lines on `run_id`: the feedback gives the correct label, the run gives the model's answer, its confidence, and its alternatives. The photos themselves stay in the app's private storage; on a debug build they can be copied out with:
+
+```bash
+adb exec-out run-as com.example.identify tar c files/images > images.tar
+```
+
+Clear history and memory deletes the experiment log too, and uninstalling the app deletes everything, so pull the log first. Logcat shows a one-line summary of every run: `adb logcat -s Identify:I VlmBridge:I IdentifyExp:D`.

@@ -16,6 +16,15 @@ The headers in third_party/llama.cpp are the source of truth. This file lists th
 
 Unchanged and confirmed against the headers: `mtmd_init_from_file`, `mtmd_context_params` fields `use_gpu`, `n_threads`, `print_timings` (all still exist), `mtmd_tokenize`, `mtmd_encode_chunk`, `mtmd_get_output_embd` (row size is `llama_model_n_embd_inp(model)`), `mtmd_helper_eval_chunks` (same 8 parameters), `llama_memory_clear(llama_get_memory(ctx), true)`, `llama_decode`, `llama_batch_init(1, 0, 1)`, `llama_token_to_piece(vocab, token, buf, length, lstrip, special)`, `llama_sampler_init_min_p(p, min_keep)`, `llama_sampler_init_dist(LLAMA_DEFAULT_SEED)`, `llama_model_n_embd_inp` (exists, so no fallback to `llama_model_n_embd`).
 
+## Changes after the spec (user requests: speed, experiment tracking, telemetry)
+
+6. A sixth JNI function, `nativeGetLastStats(handle)`, returns a UTF-8 JSON object describing the most recent native call (load, embed, or generate). The spec's "exactly 5 symbols" check is superseded.
+7. `nativeLoadModel` takes `imageMaxTokens` and passes it to `mtmd_context_params.image_max_tokens` (mtmd.h:109). `-1` or a value <= 0 keeps the model default; LFM2 uses 64..256 tokens (`set_limit_image_tokens(64, 256)` in clip.cpp). The cap also moves the tiling threshold, because LFM2 tiles when the rounded image area exceeds 2.0 x image_max_pixels (mtmd-image.cpp:929, `max_pixels_tolerance` in mtmd-image.h:166).
+8. Encode once: `nativeGetImageEmbedding` keeps the bitmap and a copy of every image chunk's encoder output in the session. `nativeGenerateWithImage` on the same file decodes those cached embeddings with `mtmd_helper_decode_image_chunk` (mtmd-helper.h:135) instead of encoding again, and falls back to `mtmd_helper_eval_chunk_single` if the cache does not match (different file or token count).
+9. Prefill runs chunk by chunk with `mtmd_helper_eval_chunk_single` (mtmd-helper.h:111) so image and text time can be measured separately. Its text branch adds to `*new_n_past` instead of assigning it (mtmd-helper.cpp:240), so the bridge seeds `new_n_past = n_past` before every call, mirroring `mtmd_helper_eval_chunks`.
+10. Per generated token, the bridge reads `llama_get_logits_ith(ctx, -1)` (llama.h:1142) after sampling, computes the raw softmax (temperature 1, before the sampler chain), and records the chosen token's probability and the 5 most likely tokens. `llama_perf_context_reset` / `llama_perf_context` (llama.h:1693) add llama's own prompt and eval timings. `llama_model_desc`, `llama_model_size`, `llama_model_n_params` (llama.h:642-655) describe the model in the load stats.
+11. `mtmd_context_params.warmup` stays at its default (true). In this version warmup only reserves compute buffers and probes flash attention (`reserve_compute_meta`, clip.cpp:3737); it does not run an encode, so it costs no measurable time.
+
 ## Header grep output (spec Section 7.6 commands)
 
 Some declarations are column-aligned with spaces before `(`, so the `name(` pattern prints nothing for them. Those are covered in the supplementary section below.

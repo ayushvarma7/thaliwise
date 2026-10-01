@@ -80,6 +80,22 @@
             android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/details_button"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/show_details"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/details_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textIsSelectable="true"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/run_model_button"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"

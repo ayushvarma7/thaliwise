@@ -43,7 +43,7 @@
     <string name="stats_format">Total: %1$d | Corrections: %2$d | Memory hits: %3$d | Memory hits later corrected: %4$d</string>
     <string name="clear_history">Clear history and memory</string>
     <string name="clear_confirm_title">Clear everything?</string>
-    <string name="clear_confirm_message">This deletes all saved identifications, corrections, embeddings, and stored photos. The model files stay.</string>
+    <string name="clear_confirm_message">This deletes all saved identifications, corrections, embeddings, stored photos, and the experiment log. The model files stay.</string>
     <string name="clear_confirm_ok">Clear</string>
     <string name="cancel">Cancel</string>
     <string name="status_ready">Model files are on the device.</string>
@@ -55,4 +55,33 @@
     <string name="status_no_space">Not enough free space. Need about 1.5 GB.</string>
     <string name="system_info_title">Native CPU features</string>
     <string name="system_info_unavailable">Load the model once to see CPU features.</string>
+
+    <string name="show_details">Show details</string>
+    <string name="hide_details">Hide details</string>
+    <string name="details_time_model">Time %1$.1f s: model load %2$.1f s, image encoding %3$.1f s, prefill %4$.1f s, answer %5$.1f s (%6$.1f tokens/s)</string>
+    <string name="details_time_memory">Time %1$.1f s: model load %2$.1f s, image encoding %3$.1f s, search %4$d ms</string>
+    <string name="details_tokens">Tokens: %1$d image, %2$d prompt text, %3$d generated</string>
+    <string name="details_cpu">CPU %1$.1f cores on average (%2$.0f%% of %3$d), peak %4$.1f, %5$.1f s of CPU time</string>
+    <string name="details_clusters">CPU time by core type: %1$s</string>
+    <string name="details_memory">App memory peak %1$d MB. Battery %2$s. Thermal %3$s.</string>
+    <string name="details_battery_charging">%1$.1f °C, charging</string>
+    <string name="details_battery_used">%1$.1f °C, about %2$.2f mAh used</string>
+    <string name="details_battery_plain">%1$.1f °C</string>
+    <string name="details_confidence">Label confidence %1$.2f (product of the label token probabilities)</string>
+    <string name="details_alternatives">Other label starts the model weighed: %1$s</string>
+    <string name="details_neighbors">Closest saved photos: %1$s</string>
+    <string name="details_neighbors_none">Closest saved photos: none saved yet</string>
+    <string name="history_latency">%1$.1f s</string>
+
+    <string name="performance_title">Performance</string>
+    <string name="threads_label">CPU threads: %1$d</string>
+    <string name="image_tokens_label">Vision tokens per image: %1$d (fewer is faster, less detail)</string>
+    <string name="performance_note">Changes take effect on the next identification. The model reloads once.</string>
+    <string name="telemetry_title">Telemetry</string>
+    <string name="live_telemetry_format">CPU now: %1$.1f cores (%2$.0f%% of %3$d)\nApp memory: %4$d MB (peak %5$d MB)\nBattery: %6$s\nThermal: %7$s\nLoaded model: %8$s</string>
+    <string name="live_battery_charging">%1$.1f °C, charging</string>
+    <string name="live_battery_discharging">%1$.1f °C, on battery</string>
+    <string name="loaded_model_format">%1$d threads, %2$d vision tokens</string>
+    <string name="loaded_model_none">not loaded</string>
+    <string name="experiment_log_format">Experiment log: %1$d KB\n%2$s</string>
 </resources>

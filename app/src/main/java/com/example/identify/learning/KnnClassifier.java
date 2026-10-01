@@ -12,17 +12,28 @@ public final class KnnClassifier {
         public final String label;
         public final float score;
         public final long entryId;
+        public final String predictedLabel;
+        public final boolean accepted;
 
-        public Hit(String label, float score, long entryId) {
+        public Hit(String label, float score, long entryId, String predictedLabel, boolean accepted) {
             this.label = label;
             this.score = score;
             this.entryId = entryId;
+            this.predictedLabel = predictedLabel;
+            this.accepted = accepted;
         }
     }
 
     /** Nearest entry with the same embedding length, or null if none. No threshold applied. */
     public static Hit nearest(float[] query, List<EmbeddingCache.Entry> entries) {
-        if (query == null) return null;
+        List<Hit> top = topK(query, entries, 1);
+        return top.isEmpty() ? null : top.get(0);
+    }
+
+    /** Up to k entries with the same embedding length, most similar first. No threshold applied. */
+    public static List<Hit> topK(float[] query, List<EmbeddingCache.Entry> entries, int k) {
+        List<Hit> out = new ArrayList<>();
+        if (query == null) return out;
         List<EmbeddingCache.Entry> kept = new ArrayList<>();
         List<float[]> vectors = new ArrayList<>();
         for (EmbeddingCache.Entry e : entries) {
@@ -31,9 +42,10 @@ public final class KnnClassifier {
                 vectors.add(e.embedding);
             }
         }
-        KnnSearch.Match m = KnnSearch.nearest(query, vectors);
-        if (m == null) return null;
-        EmbeddingCache.Entry best = kept.get(m.index);
-        return new Hit(best.finalLabel, m.score, best.id);
+        for (KnnSearch.Match m : KnnSearch.topK(query, vectors, k)) {
+            EmbeddingCache.Entry e = kept.get(m.index);
+            out.add(new Hit(e.finalLabel, m.score, e.id, e.predictedLabel, e.accepted));
+        }
+        return out;
     }
 }
