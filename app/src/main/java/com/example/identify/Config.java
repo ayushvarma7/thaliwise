@@ -54,6 +54,11 @@ public final class Config {
     public static final String EXPERIMENT_LOG_FILE = "experiment_log.jsonl";
     public static final String EXP_TAG = "IdentifyExp";
 
+    /** Logcat tag for Health Connect. */
+    public static final String HEALTH_TAG = "IdentifyHealth";
+    /** Daily step goal until the user can change it (later phase). */
+    public static final long DEFAULT_STEP_GOAL = 10_000L;
+
     public static final String SOURCE_MODEL  = "MODEL";
     public static final String SOURCE_MEMORY = "MEMORY";
 

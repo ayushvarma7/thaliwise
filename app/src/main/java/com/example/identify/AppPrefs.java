@@ -12,6 +12,7 @@ public final class AppPrefs {
     private static final String KEY_DL_MMPROJ_ID = "dl_mmproj_id";
     private static final String KEY_N_THREADS = "n_threads";
     private static final String KEY_IMAGE_MAX_TOKENS = "image_max_tokens";
+    private static final String KEY_STEP_GOAL = "step_goal";
 
     private static volatile AppPrefs instance;
 
@@ -56,6 +57,10 @@ public final class AppPrefs {
     }
 
     public void setThreads(int threads) { prefs.edit().putInt(KEY_N_THREADS, threads).apply(); }
+
+    public long getStepGoal() { return prefs.getLong(KEY_STEP_GOAL, Config.DEFAULT_STEP_GOAL); }
+
+    public void setStepGoal(long goal) { prefs.edit().putLong(KEY_STEP_GOAL, goal).apply(); }
 
     /** Vision token cap per image. A change reloads the model on the next identification. */
     public int getImageMaxTokens() {

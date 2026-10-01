@@ -119,3 +119,5 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 8.1 Raise minSdk to 34: DONE - minSdk = 34, appVersion() uses PackageInfoFlags only, unused android.os.Build import removed, :app:assembleDebug exit 0.
 - 8.2 Manifest: DONE - 5 android.permission.health entries, PrivacyPolicyActivity plus ViewPermissionUsageActivity alias (VIEW_PERMISSION_USAGE / HEALTH_PERMISSIONS / START_VIEW_PERMISSION_USAGE); no other permission added.
 - 8.6 Privacy policy screen: DONE - activity_privacy_policy.xml and PrivacyPolicyActivity added, privacy_title and privacy_policy_text strings added; :app:assembleDebug exit 0.
+- 8.3 Config and prefs: DONE - Config.HEALTH_TAG "IdentifyHealth", Config.DEFAULT_STEP_GOAL 10000, AppPrefs get/setStepGoal (key step_goal); compileDebugJavaWithJavac exit 0.
+- 8.4 :core DailyHealth: DONE - DailyHealth + DailyHealthTest (4 tests pass); 10 core test classes; core is android-free.
