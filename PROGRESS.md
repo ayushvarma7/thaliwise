@@ -123,3 +123,5 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 8.4 :core DailyHealth: DONE - DailyHealth + DailyHealthTest (4 tests pass); 10 core test classes; core is android-free.
 - 8.5 HealthConnectRepository: DONE - platform android.health.connect reader (4 aggregates, permission helpers, manage intent, experiment-log events); compileDebugJavaWithJavac exit 0.
 - 8.7 Strings and Settings UI: DONE - Health Connect section in Settings (status, today, Connect/Refresh/Open); :core:test, :app:assembleDebug, :app:lintDebug BUILD SUCCESSFUL, lint 0 errors, 23 warnings.
+- 8.8 Compliance checks: DONE - all 10 pass (no .kt, no androidx.health, network only in ModelDownloader, core android-free, no forbidden words, no dashes, no camera/storage permission, no TODO, health alias present, minSdk = 34).
+- 8.9 Install on phone: DONE - adb install -r Success on Pixel 8 (48071VDJH00284), no FATAL EXCEPTION, dumpsys lists the 5 health permissions, all granted=false before approval.
