@@ -57,7 +57,7 @@ Goal of this phase, and nothing more: the app connects to Android Health Connect
   - Permission strings (class `android.health.connect.HealthPermissions`): `android.permission.health.READ_STEPS`, `...READ_ACTIVE_CALORIES_BURNED`, `...READ_TOTAL_CALORIES_BURNED`, `...READ_NUTRITION`, `...WRITE_NUTRITION`.
   - Health permissions on Android 14+ are runtime permissions. Request them with `ActivityResultContracts.RequestMultiplePermissions`; the system shows the Health Connect permission screen. Check them with `ContextCompat.checkSelfPermission`.
   - Health Connect refuses to show the permission screen unless the app declares an `activity-alias` with action `android.intent.action.VIEW_PERMISSION_USAGE`, category `android.intent.category.HEALTH_PERMISSIONS`, and permission `android.permission.START_VIEW_PERMISSION_USAGE`, pointing at a privacy policy screen.
-  - Intent to open this app's page in Health Connect: action `HealthConnectManager.ACTION_MANAGE_HEALTH_PERMISSIONS` with extra `Intent.EXTRA_PACKAGE_NAME` = the app package.
+  - Intent to open Health Connect: action string `android.health.connect.action.HEALTH_HOME_SETTINGS` (no SDK 35 constant). Do NOT use `HealthConnectManager.ACTION_MANAGE_HEALTH_PERMISSIONS`: on the phone its activity requires `android.permission.GRANT_RUNTIME_PERMISSIONS` and crashes a normal app with `SecurityException` (found on the Pixel 8 during Phase 8).
 
 ---
 
@@ -433,11 +433,16 @@ public final class HealthConnectRepository {
         return missing;
     }
 
-    /** Opens this app's page inside Health Connect, where the user can change access. */
+    /**
+     * Health Connect's home screen, where the user manages app access. ACTION_MANAGE_HEALTH_PERMISSIONS is
+     * not usable here: its activity requires android.permission.GRANT_RUNTIME_PERMISSIONS (system apps only)
+     * and throws SecurityException for this app. HEALTH_HOME_SETTINGS has no SDK 35 constant, so the
+     * action string is written out; it resolves to the exported, unprotected TrampolineActivity.
+     */
+    public static final String ACTION_HEALTH_HOME_SETTINGS = "android.health.connect.action.HEALTH_HOME_SETTINGS";
+
     public static Intent manageIntent(Context ctx) {
-        Intent i = new Intent(HealthConnectManager.ACTION_MANAGE_HEALTH_PERMISSIONS);
-        i.putExtra(Intent.EXTRA_PACKAGE_NAME, ctx.getPackageName());
-        return i;
+        return new Intent(ACTION_HEALTH_HOME_SETTINGS);
     }
 
     /** Logs what the user granted on the permission screen. */
@@ -734,6 +739,7 @@ replace with:
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 ```
 Find:
@@ -901,7 +907,8 @@ replace with:
     private void openHealthConnect() {
         try {
             startActivity(HealthConnectRepository.manageIntent(requireContext()));
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(Config.HEALTH_TAG, "could not open Health Connect", e);
             if (binding != null) {
                 Snackbar.make(binding.getRoot(), R.string.health_open_failed, Snackbar.LENGTH_LONG).show();
             }
@@ -1037,6 +1044,7 @@ Final message to the user: what was built, the permissions requested, the lint a
 | Steps show "no data" but Fitbit shows steps | Fitbit/Fit is not writing to Health Connect. See 8.10 item 5. |
 | Calories about 1000x off | See the unit check in 8.10. |
 | Lint error on the alias or permissions | Read the message and fix only Phase 8 files. Do not suppress lint globally. |
+| `SecurityException ... requires android.permission.GRANT_RUNTIME_PERMISSIONS` when tapping Open Health Connect | Use the `HEALTH_HOME_SETTINGS` action from Section 8, not `ACTION_MANAGE_HEALTH_PERMISSIONS`, and keep `SecurityException` in the catch. |
 | `ActivityResultLauncher` crash "register before STARTED" | The launcher must be registered in `onCreate` (Edit B), not in a click listener. |
 
 ---

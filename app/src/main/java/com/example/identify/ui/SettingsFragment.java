@@ -3,6 +3,7 @@ package com.example.identify.ui;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -235,7 +236,8 @@ public class SettingsFragment extends Fragment {
     private void openHealthConnect() {
         try {
             startActivity(HealthConnectRepository.manageIntent(requireContext()));
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(Config.HEALTH_TAG, "could not open Health Connect", e);
             if (binding != null) {
                 Snackbar.make(binding.getRoot(), R.string.health_open_failed, Snackbar.LENGTH_LONG).show();
             }

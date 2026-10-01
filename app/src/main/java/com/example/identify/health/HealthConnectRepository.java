@@ -88,11 +88,16 @@ public final class HealthConnectRepository {
         return missing;
     }
 
-    /** Opens this app's page inside Health Connect, where the user can change access. */
+    /**
+     * Health Connect's home screen, where the user manages app access. ACTION_MANAGE_HEALTH_PERMISSIONS is
+     * not usable here: its activity requires android.permission.GRANT_RUNTIME_PERMISSIONS (system apps only)
+     * and throws SecurityException for this app. HEALTH_HOME_SETTINGS has no SDK 35 constant, so the
+     * action string is written out; it resolves to the exported, unprotected TrampolineActivity.
+     */
+    public static final String ACTION_HEALTH_HOME_SETTINGS = "android.health.connect.action.HEALTH_HOME_SETTINGS";
+
     public static Intent manageIntent(Context ctx) {
-        Intent i = new Intent(HealthConnectManager.ACTION_MANAGE_HEALTH_PERMISSIONS);
-        i.putExtra(Intent.EXTRA_PACKAGE_NAME, ctx.getPackageName());
-        return i;
+        return new Intent(ACTION_HEALTH_HOME_SETTINGS);
     }
 
     /** Logs what the user granted on the permission screen. */
