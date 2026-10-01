@@ -14,13 +14,15 @@ public final class VlmEngine {
     private static final VlmEngine INSTANCE = new VlmEngine();
     public static VlmEngine get() { return INSTANCE; }
 
-    private long handle = 0L;
-    private String systemInfo = "";
+    // Written only inside synchronized methods. volatile so the UI can read them without waiting
+    // for the lock, which a running inference holds for seconds.
+    private volatile long handle = 0L;
+    private volatile String systemInfo = "";
 
     private VlmEngine() {}
 
-    public synchronized boolean isLoaded() { return handle != 0L; }
-    public synchronized String getSystemInfo() { return systemInfo; }
+    public boolean isLoaded() { return handle != 0L; }
+    public String getSystemInfo() { return systemInfo; }
 
     /** Loads model + projector once. Call only on the model thread. */
     public synchronized void ensureLoaded(Context ctx) {

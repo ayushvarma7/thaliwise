@@ -42,3 +42,17 @@ Phase 2: DONE - core compiles, all 7 test classes pass.
 - Native API differences from spec Section 7.7 (5 items) are recorded in NATIVE_API_NOTES.md.
 
 Phase 3: DONE - debug APK builds with the native bridge; 5 JNI symbols; Release native build.
+
+## Phase 4: UI
+
+- `./gradlew :core:test :app:assembleDebug`: BUILD SUCCESSFUL.
+- `./gradlew :app:lintDebug`: BUILD SUCCESSFUL, 0 errors, 19 warnings. All warnings follow from fixed spec decisions: GradleDependency x13 (pinned versions), MissingApplicationIcon (no custom launcher icon), ChromeOsAbiSupport (arm64-v8a only), DataExtractionRules (allowBackup=false), UsableSpace (getUsableSpace per spec), SetTextI18n x2 ("Error" label, status concatenation).
+- Small deviations from the spec text, each to avoid a concrete bug:
+  - VlmEngine: `handle` and `systemInfo` are volatile and `isLoaded()` / `getSystemInfo()` are not synchronized. Settings calls them on the main thread every second; with the spec's synchronized versions the UI thread would block for the whole inference (ANR risk).
+  - activity_main.xml root has `android:fitsSystemWindows="true"`: targetSdk 35 forces edge-to-edge on Android 15+, which would put the toolbar under the status bar.
+  - CameraFragment also saves the camera capture Uri in onSaveInstanceState, because the system camera can outlive the app process.
+  - ModelDownloader.enqueue removes the previous DownloadManager id for a file before re-enqueueing it, so a double tap never starts two downloads to the same path.
+  - EmbeddingCache skips rows whose byte length does not equal embeddingDim * 4 (avoids a startup crash on a corrupt row).
+  - ResultFragment writes result text only while the stage is DONE, so an ERROR message is not overwritten when observers re-attach after rotation.
+
+Phase 4: DONE - APK with all screens builds; lint 0 errors.

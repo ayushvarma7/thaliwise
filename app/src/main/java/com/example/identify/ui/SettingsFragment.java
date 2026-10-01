@@ -1,0 +1,181 @@
+package com.example.identify.ui;
+
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.example.identify.AppPrefs;
+import com.example.identify.Config;
+import com.example.identify.R;
+import com.example.identify.databinding.FragmentSettingsBinding;
+import com.example.identify.model.ModelDownloader;
+import com.example.identify.model.VlmEngine;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
+
+public class SettingsFragment extends Fragment {
+
+    private static final int SLIDER_MIN = 80;
+    private static final int SLIDER_MAX = 99;
+
+    private FragmentSettingsBinding binding;
+    private SettingsViewModel vm;
+    private AppPrefs prefs;
+    private ModelDownloader.Progress lastProgress;
+    private int total;
+    private int corrections;
+    private int memoryHits;
+    private int memoryHitsCorrected;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        binding = FragmentSettingsBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        vm = new ViewModelProvider(this).get(SettingsViewModel.class);
+        prefs = AppPrefs.get(requireContext());
+
+        binding.downloadProgress.setMax(1000);
+
+        binding.memorySwitch.setChecked(prefs.isMemoryEnabled());
+        binding.memorySwitch.setOnCheckedChangeListener((button, checked) -> prefs.setMemoryEnabled(checked));
+
+        // Integer slider range on purpose: float step sizes crash Slider.
+        int sliderValue = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, Math.round(prefs.getKnnThreshold() * 100)));
+        binding.thresholdSlider.setValue(sliderValue);
+        updateThresholdLabel(sliderValue / 100f);
+        binding.thresholdSlider.addOnChangeListener((slider, value, fromUser) -> {
+            float threshold = value / 100f;
+            prefs.setKnnThreshold(threshold);
+            updateThresholdLabel(threshold);
+        });
+
+        binding.downloadButton.setOnClickListener(v -> {
+            if (!vm.startDownload()) {
+                Snackbar.make(binding.getRoot(), R.string.status_no_space, Snackbar.LENGTH_LONG).show();
+                return;
+            }
+            binding.downloadButton.setEnabled(false);   // the next refresh re-enables it if still needed
+        });
+        binding.unloadModelButton.setOnClickListener(v -> {
+            binding.unloadModelButton.setEnabled(false);
+            vm.unloadModel(() -> {
+                if (binding == null) return;
+                binding.unloadModelButton.setEnabled(true);
+                refreshUi();
+            });
+        });
+        binding.deleteModelButton.setOnClickListener(v -> {
+            binding.deleteModelButton.setEnabled(false);
+            vm.deleteModel(() -> {
+                if (binding == null) return;
+                binding.deleteModelButton.setEnabled(true);
+                refreshUi();
+            });
+        });
+        binding.clearHistoryButton.setOnClickListener(v -> new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.clear_confirm_title)
+                .setMessage(R.string.clear_confirm_message)
+                .setPositiveButton(R.string.clear_confirm_ok, (dialog, which) -> vm.clearAll(this::refreshUi))
+                .setNegativeButton(R.string.cancel, null)
+                .show());
+
+        vm.getProgress().observe(getViewLifecycleOwner(), p -> {
+            lastProgress = p;
+            refreshUi();
+        });
+        vm.getCount().observe(getViewLifecycleOwner(), n -> { total = n == null ? 0 : n; updateStats(); });
+        vm.getCorrectionCount().observe(getViewLifecycleOwner(), n -> { corrections = n == null ? 0 : n; updateStats(); });
+        vm.getMemoryHitCount().observe(getViewLifecycleOwner(), n -> { memoryHits = n == null ? 0 : n; updateStats(); });
+        vm.getMemoryHitCorrectedCount().observe(getViewLifecycleOwner(),
+                n -> { memoryHitsCorrected = n == null ? 0 : n; updateStats(); });
+        updateStats();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        vm.startPolling();
+        refreshUi();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        vm.stopPolling();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
+    }
+
+    private void refreshUi() {
+        if (binding == null || !isAdded()) return;
+        boolean ready = ModelDownloader.filesReady(requireContext());
+        ModelDownloader.Progress p = lastProgress;
+        boolean running = !ready && p != null && p.state == ModelDownloader.Progress.STATE_RUNNING;
+        boolean loaded = VlmEngine.get().isLoaded();
+
+        if (ready) {
+            binding.modelStatusText.setVisibility(View.VISIBLE);
+            binding.modelStatusText.setText(getString(R.string.status_ready) + " "
+                    + getString(loaded ? R.string.status_loaded : R.string.status_not_loaded));
+        } else if (running) {
+            binding.modelStatusText.setVisibility(View.GONE);
+        } else if (p != null && p.state == ModelDownloader.Progress.STATE_FAILED) {
+            binding.modelStatusText.setVisibility(View.VISIBLE);
+            binding.modelStatusText.setText(getString(R.string.status_failed, p.reason));
+        } else {
+            binding.modelStatusText.setVisibility(View.VISIBLE);
+            binding.modelStatusText.setText(R.string.status_missing);
+        }
+
+        if (running) {
+            long totalBytes = p.totalBytes > 0 ? p.totalBytes : Config.EXPECTED_TOTAL_BYTES;
+            int permille = (int) Math.min(1000L, p.downloadedBytes * 1000L / totalBytes);
+            binding.downloadProgress.setVisibility(View.VISIBLE);
+            binding.downloadProgress.setProgressCompat(permille, true);
+            binding.downloadProgressText.setVisibility(View.VISIBLE);
+            binding.downloadProgressText.setText(getString(R.string.status_downloading,
+                    (int) (p.downloadedBytes / 1_000_000), (int) (totalBytes / 1_000_000)));
+        } else {
+            binding.downloadProgress.setVisibility(View.GONE);
+            binding.downloadProgressText.setVisibility(View.GONE);
+        }
+
+        boolean showDownload = !ready && !running;
+        binding.downloadButton.setVisibility(showDownload ? View.VISIBLE : View.GONE);
+        if (showDownload) binding.downloadButton.setEnabled(true);
+        binding.unloadModelButton.setVisibility(loaded ? View.VISIBLE : View.GONE);
+        binding.deleteModelButton.setVisibility(ready ? View.VISIBLE : View.GONE);
+
+        String info = VlmEngine.get().getSystemInfo();
+        binding.systemInfoText.setText(info == null || info.isEmpty()
+                ? getString(R.string.system_info_unavailable)
+                : info);
+    }
+
+    private void updateThresholdLabel(float threshold) {
+        if (binding == null) return;
+        binding.thresholdLabel.setText(getString(R.string.threshold_label, threshold));
+    }
+
+    private void updateStats() {
+        if (binding == null) return;
+        binding.statsText.setText(getString(R.string.stats_format, total, corrections, memoryHits, memoryHitsCorrected));
+    }
+}

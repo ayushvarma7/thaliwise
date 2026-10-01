@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/cameraFragment">
+
+    <fragment
+        android:id="@+id/cameraFragment"
+        android:name="com.example.identify.ui.CameraFragment"
+        android:label="@string/title_camera">
+        <action
+            android:id="@+id/action_camera_to_result"
+            app:destination="@id/resultFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resultFragment"
+        android:name="com.example.identify.ui.ResultFragment"
+        android:label="@string/title_result">
+        <argument
+            android:name="imagePath"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_result_to_history"
+            app:destination="@id/historyFragment"
+            app:popUpTo="@id/cameraFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="com.example.identify.ui.HistoryFragment"
+        android:label="@string/title_history" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.identify.ui.SettingsFragment"
+        android:label="@string/title_settings" />
+</navigation>
