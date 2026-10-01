@@ -2,7 +2,6 @@ package com.example.identify.ui;
 
 import android.app.Application;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -416,10 +415,7 @@ public class ResultViewModel extends AndroidViewModel {
     private static String appVersion(Application app) {
         try {
             PackageManager pm = app.getPackageManager();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                return pm.getPackageInfo(app.getPackageName(), PackageManager.PackageInfoFlags.of(0)).versionName;
-            }
-            return pm.getPackageInfo(app.getPackageName(), 0).versionName;
+            return pm.getPackageInfo(app.getPackageName(), PackageManager.PackageInfoFlags.of(0)).versionName;
         } catch (PackageManager.NameNotFoundException e) {
             return "unknown";
         }

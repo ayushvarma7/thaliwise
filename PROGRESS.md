@@ -116,3 +116,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 ## Phase 8: Health Connect
 
 - 8.0 Preflight: DONE - working tree clean except the new build prompt, last commit cbc0e5a, :core:test and :app:assembleDebug exit 0.
+- 8.1 Raise minSdk to 34: DONE - minSdk = 34, appVersion() uses PackageInfoFlags only, unused android.os.Build import removed, :app:assembleDebug exit 0.
