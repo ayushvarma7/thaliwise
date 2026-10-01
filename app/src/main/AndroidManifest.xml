@@ -43,6 +43,12 @@
             </intent-filter>
         </activity>
 
+        <!-- First-launch user profile (six steps); Settings > Edit profile opens it again. -->
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Privacy policy. Health Connect opens it from its permission screen. -->
         <activity
             android:name=".PrivacyPolicyActivity"

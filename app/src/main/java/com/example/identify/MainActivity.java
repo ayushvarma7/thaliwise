@@ -1,5 +1,6 @@
 package com.example.identify;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,6 +22,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!AppPrefs.get(this).isOnboarded()) {
+            // First launch: the profile comes first (US-1.1). Onboarding opens this activity again at Start.
+            startActivity(new Intent(this, OnboardingActivity.class));
+            finish();
+            return;
+        }
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);

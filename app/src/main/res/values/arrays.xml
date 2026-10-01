@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Onboarding chips. The chosen labels are stored as they are; cuisines match the table's cuisine column by word. -->
+    <string-array name="onboarding_reasons">
+        <item>Understand what I eat</item>
+        <item>I eat out a lot</item>
+        <item>Cook more at home</item>
+        <item>My doctor recommended it</item>
+        <item>Training for a sport</item>
+        <item>Curious about calories</item>
+    </string-array>
+
+    <string-array name="onboarding_cuisines">
+        <item>Indian</item>
+        <item>Mexican</item>
+        <item>Chinese</item>
+        <item>Japanese</item>
+        <item>Korean</item>
+        <item>Thai</item>
+        <item>Vietnamese</item>
+        <item>Italian</item>
+        <item>Mediterranean</item>
+        <item>Middle Eastern</item>
+        <item>American</item>
+        <item>Southern and BBQ</item>
+        <item>Caribbean</item>
+        <item>Latin American</item>
+        <item>Ethiopian</item>
+        <item>Hawaiian</item>
+        <item>Fast food</item>
+    </string-array>
+
+    <string-array name="onboarding_diet">
+        <item>Vegetarian</item>
+        <item>Vegan</item>
+        <item>Pescatarian</item>
+        <item>Halal</item>
+        <item>Kosher</item>
+        <item>Gluten-free</item>
+        <item>Dairy-free</item>
+        <item>@string/diet_none</item>
+    </string-array>
+
+    <string-array name="onboarding_eat_more">
+        <item>More protein</item>
+        <item>More vegetables</item>
+        <item>Less sugar</item>
+        <item>Fewer fried foods</item>
+        <item>Smaller portions</item>
+        <item>More home cooking</item>
+    </string-array>
+</resources>

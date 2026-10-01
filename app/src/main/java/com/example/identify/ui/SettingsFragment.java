@@ -2,6 +2,7 @@ package com.example.identify.ui;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,11 +15,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.identify.AppPrefs;
 import com.example.identify.Config;
+import com.example.identify.OnboardingActivity;
 import com.example.identify.R;
 import com.example.identify.core.DailyHealth;
+import com.example.identify.core.ProfileMath;
+import com.example.identify.core.UserProfile;
 import com.example.identify.databinding.FragmentSettingsBinding;
 import com.example.identify.health.HealthConnectRepository;
 import com.example.identify.model.ModelDownloader;
@@ -28,6 +33,11 @@ import com.example.identify.util.Telemetry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class SettingsFragment extends Fragment {
 
@@ -164,6 +174,11 @@ public class SettingsFragment extends Fragment {
         });
         binding.healthRefreshButton.setOnClickListener(v -> refreshHealth());
         binding.healthOpenButton.setOnClickListener(v -> openHealthConnect());
+
+        binding.editProfileButton.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), OnboardingActivity.class)));
+        binding.historyButton.setOnClickListener(v ->
+                NavHostFragment.findNavController(this).navigate(R.id.historyFragment));
     }
 
     @Override
@@ -172,6 +187,7 @@ public class SettingsFragment extends Fragment {
         vm.startPolling();
         refreshUi();
         refreshHealth();
+        refreshProfile();
     }
 
     @Override
@@ -184,6 +200,40 @@ public class SettingsFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    /** Profile section: the onboarding answers and the plan, in the units the user picked. */
+    private void refreshProfile() {
+        if (binding == null || !isAdded()) return;
+        UserProfile p = prefs.getProfile();
+        String name = p.name.isEmpty() ? getString(R.string.profile_no_name) : p.name;
+        List<String> lines = new ArrayList<>();
+        lines.add(p.hasBody()
+                ? getString(R.string.profile_body_line, name, String.valueOf(p.ageYears), bodySize(p))
+                : getString(R.string.profile_body_missing, name));
+        lines.add(getString(R.string.profile_goal_line, HealthFormat.goal(requireContext(), p.goal)));
+        lines.add(getString(R.string.profile_plan_line, formatKcal(prefs.getCalorieBudget()),
+                formatSteps(prefs.getStepGoal())));
+        lines.add(getString(R.string.profile_cuisines_line, joined(p.cuisines)));
+        lines.add(getString(R.string.profile_diet_line, joined(p.diet)));
+        lines.add(getString(R.string.profile_eat_more_line, joined(p.eatMore)));
+        lines.add(getString(R.string.profile_reasons_line, joined(p.reasons)));
+        binding.profileSummaryText.setText(String.join("\n", lines));
+    }
+
+    private String bodySize(UserProfile p) {
+        if (prefs.usesUsUnits()) {
+            int[] fi = ProfileMath.cmToFeetInches(p.heightCm);
+            return getString(R.string.profile_size_us, String.valueOf(fi[0]), String.valueOf(fi[1]),
+                    String.valueOf(Math.round(ProfileMath.kgToLb(p.weightKg))));
+        }
+        return getString(R.string.profile_size_metric, String.valueOf(Math.round(p.heightCm)),
+                String.valueOf(Math.round(p.weightKg)));
+    }
+
+    /** Alphabetical, because the stored sets have no order. */
+    private String joined(Set<String> values) {
+        return values.isEmpty() ? getString(R.string.profile_none) : String.join(", ", new TreeSet<>(values));
     }
 
     /** Health Connect section: status line, buttons, and today's numbers. Reads once per call, not per poll. */
