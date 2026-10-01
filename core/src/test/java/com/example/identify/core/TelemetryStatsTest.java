@@ -36,6 +36,12 @@ public class TelemetryStatsTest {
     }
 
     @Test
+    public void positiveDischargeConventionGivesSameEnergy() {
+        List<TelemetryStats.Sample> samples = Arrays.asList(s(0, 0, 1, 1_000_000), s(3_600_000, 0, 1, 1_000_000));
+        assertEquals(1000.0, TelemetryStats.summarize(samples, false).energyMah, 1e-9);
+    }
+
+    @Test
     public void chargingOrMissingCurrentGivesNoEnergy() {
         List<TelemetryStats.Sample> samples = Arrays.asList(s(0, 0, 1, 500_000), s(1000, 10, 1, 500_000));
         assertTrue(Double.isNaN(TelemetryStats.summarize(samples, true).energyMah));

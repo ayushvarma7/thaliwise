@@ -104,3 +104,11 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - `./gradlew :app:assembleDebug`: BUILD SUCCESSFUL. `:app:lintDebug`: 0 errors, 23 warnings (the 19 from Phase 4 plus PluralsCandidate x2, UsableSpace for the new download_start event, and one DiscouragedApi that was then fixed by switching the sampler to scheduleWithFixedDelay).
 - libvlm-bridge.so now exports 6 JNI symbols (adds nativeGetLastStats). Native changes are listed in NATIVE_API_NOTES.md items 6 to 11.
 - Compliance checks 1 to 10 rerun: all pass (check 6 with .toolchain excluded, as before).
+
+## On-device results after the speed change (2026-10-01)
+
+- Run 7392a6cf (Pixel 8, 4 threads, 256 vision token cap, first load): total 11.6 s = model load 2.3 s + image encode 7.3 s (386x512, 192 tokens) + generate 2.05 s (prefill 1.86 s, 2 tokens). Image encoding reused by the generation (n_image_chunks_reused 1). Before the change the same kind of photo needed 6 tiles + thumbnail at 18 to 54 s each.
+- Telemetry: 3.49 cores average, 4.5 peak, CPU time by cluster mid 64% / big 28% / little 8%; RSS peak 2.2 GB (anon 1.4 GB, file 0.8 GB); thermal none.
+- Model answered "mouse" (no Label/Description lines; parser fallback used). Label confidence 0.245, other starts Computer 0.16, The 0.15, Apple 0.14, Mouse 0.14. User accepted after 51.7 s; feedback event linked by run_id.
+- Previous exits read from Android: the 15:23 restart was user_requested (swiped away) at RSS 1.5 GB, not a crash.
+- Fixes after reading this run: battery energy now requires no external power (the phone was plugged in although isCharging() reported false under load) and is sign-agnostic; llama_perf timings enabled (no_perf = false). 45 core tests pass, lint 0 errors, reinstalled.

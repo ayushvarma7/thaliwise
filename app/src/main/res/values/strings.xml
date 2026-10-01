@@ -64,7 +64,7 @@
     <string name="details_cpu">CPU %1$.1f cores on average (%2$.0f%% of %3$d), peak %4$.1f, %5$.1f s of CPU time</string>
     <string name="details_clusters">CPU time by core type: %1$s</string>
     <string name="details_memory">App memory peak %1$d MB. Battery %2$s. Thermal %3$s.</string>
-    <string name="details_battery_charging">%1$.1f °C, charging</string>
+    <string name="details_battery_charging">%1$.1f °C, plugged in (no energy figure)</string>
     <string name="details_battery_used">%1$.1f °C, about %2$.2f mAh used</string>
     <string name="details_battery_plain">%1$.1f °C</string>
     <string name="details_confidence">Label confidence %1$.2f (product of the label token probabilities)</string>
@@ -79,7 +79,7 @@
     <string name="performance_note">Changes take effect on the next identification. The model reloads once.</string>
     <string name="telemetry_title">Telemetry</string>
     <string name="live_telemetry_format">CPU now: %1$.1f cores (%2$.0f%% of %3$d)\nApp memory: %4$d MB (peak %5$d MB)\nBattery: %6$s\nThermal: %7$s\nLoaded model: %8$s</string>
-    <string name="live_battery_charging">%1$.1f °C, charging</string>
+    <string name="live_battery_charging">%1$.1f °C, plugged in</string>
     <string name="live_battery_discharging">%1$.1f °C, on battery</string>
     <string name="loaded_model_format">%1$d threads, %2$d vision tokens</string>
     <string name="loaded_model_none">not loaded</string>

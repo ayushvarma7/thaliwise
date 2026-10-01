@@ -105,7 +105,13 @@ public final class Telemetry {
         public long currentUa = TelemetryStats.NO_CURRENT;
         public int levelPct = -1;
         public boolean charging;
+        /** Plugged into AC, USB, or wireless power. Only known when read with temperature. */
+        public boolean plugged;
+        public String pluggedType = "unknown";
         public float tempC = Float.NaN;
+
+        /** On a charger, the battery current also carries the charger's input, so it says nothing about the app. */
+        public boolean externalPower() { return plugged || charging; }
     }
 
     public static Battery battery(Context ctx, boolean withTemperature) {
@@ -123,6 +129,12 @@ public final class Telemetry {
             if (sticky != null) {
                 int t = sticky.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
                 if (t != Integer.MIN_VALUE) b.tempC = t / 10f;
+                int p = sticky.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+                b.plugged = p != 0;
+                b.pluggedType = p == BatteryManager.BATTERY_PLUGGED_AC ? "ac"
+                        : p == BatteryManager.BATTERY_PLUGGED_USB ? "usb"
+                        : p == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "wireless"
+                        : p == 0 ? "none" : "other";
             }
         }
         return b;
@@ -219,6 +231,7 @@ public final class Telemetry {
         public final int nCpus;
         /** For example "mid 78%, big 15%, little 7%", empty if thread placement could not be read. */
         public final String clusterShares;
+        /** True when the phone was plugged in or charging during the window. */
         public final boolean charging;
         public final float tempEndC;
         public final String thermalMax;
@@ -331,8 +344,8 @@ public final class Telemetry {
             Battery batteryEnd = battery(app, true);
             ActivityManager.MemoryInfo memEnd = deviceMemory(app);
             ProcStatus ps = procStatus();
-            boolean charging = batteryStart.charging || batteryEnd.charging;
-            TelemetryStats.Summary s = TelemetryStats.summarize(samples, charging);
+            boolean externalPower = batteryStart.externalPower() || batteryEnd.externalPower();
+            TelemetryStats.Summary s = TelemetryStats.summarize(samples, externalPower);
             int nCpus = cpuCount();
 
             JSONObject j = new JSONObject();
@@ -388,7 +401,9 @@ public final class Telemetry {
             ExperimentLog.put(j, "memory", mem);
 
             JSONObject bat = new JSONObject();
-            ExperimentLog.put(bat, "charging", charging);
+            ExperimentLog.put(bat, "external_power", externalPower);
+            ExperimentLog.put(bat, "plugged", batteryEnd.pluggedType);
+            ExperimentLog.put(bat, "charging_flag", batteryStart.charging || batteryEnd.charging);
             ExperimentLog.put(bat, "level_start_pct", batteryStart.levelPct);
             ExperimentLog.put(bat, "level_end_pct", batteryEnd.levelPct);
             ExperimentLog.put(bat, "temp_start_c", (double) batteryStart.tempC);
@@ -396,7 +411,7 @@ public final class Telemetry {
             ExperimentLog.put(bat, "current_avg_ma", round2(s.avgCurrentMa));
             ExperimentLog.put(bat, "current_peak_ma", round2(s.peakCurrentMa));
             ExperimentLog.put(bat, "energy_mah", round2(s.energyMah));
-            if (charging) ExperimentLog.put(bat, "note", "charging: current and energy include the charger");
+            if (externalPower) ExperimentLog.put(bat, "note", "plugged in: current includes the charger, energy not measured");
             ExperimentLog.put(j, "battery", bat);
 
             JSONObject th = new JSONObject();
@@ -405,7 +420,7 @@ public final class Telemetry {
             ExperimentLog.put(th, "headroom_min", (double) headroomMin);
             ExperimentLog.put(j, "thermal", th);
 
-            return new Report(j, s, nCpus, shares.toString(), charging, batteryEnd.tempC, thermalName(thermalMax));
+            return new Report(j, s, nCpus, shares.toString(), externalPower, batteryEnd.tempC, thermalName(thermalMax));
         }
     }
 
@@ -440,7 +455,7 @@ public final class Telemetry {
                 : TelemetryStats.cores(now.cpuMs - previous.cpuMs, now.wallMs - previous.wallMs);
         ProcStatus ps = procStatus();
         Battery b = battery(ctx, true);
-        return new Live(now, cores, cpuCount(), ps.rssKb / 1024, ps.hwmKb / 1024, b.tempC, b.charging,
+        return new Live(now, cores, cpuCount(), ps.rssKb / 1024, ps.hwmKb / 1024, b.tempC, b.externalPower(),
                 thermalName(thermalStatus(ctx)));
     }
 

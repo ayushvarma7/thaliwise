@@ -221,6 +221,7 @@ Java_com_example_identify_model_VlmEngine_nativeLoadModel(
     cp.n_ubatch        = kBatch;
     cp.n_threads       = nThreads;
     cp.n_threads_batch = nThreads;
+    cp.no_perf         = false;   // the default (true) leaves llama_perf_context timings at 0
     s->lctx = llama_init_from_model(s->model, cp);
     if (!s->lctx) {
         LOGE("context init failed");

@@ -83,15 +83,19 @@ Module layout:
 
 ## 6. Performance on Pixel 8
 
-First measurement, with the original pipeline (Pixel 8, Android 17, 4 threads, phone charging over USB): a 771x1024 photo was split into a 2x3 grid of 512x512 tiles plus a thumbnail. Each tile took 17.8 to 54.4 s to encode (`image slice encoded in` lines) and 3.3 to 10.3 s to decode into the language model (`image decoded` lines). The answer had not appeared after several minutes. That run led to the single-tile, encode-once pipeline in section 5. The current pipeline has not been timed on the device yet:
+First measurement, with the original pipeline (Pixel 8, Android 17, 4 threads, phone charging over USB): a 771x1024 photo was split into a 2x3 grid of 512x512 tiles plus a thumbnail. Each tile took 17.8 to 54.4 s to encode (`image slice encoded in` lines) and 3.3 to 10.3 s to decode into the language model (`image decoded` lines). The answer had not appeared after several minutes. That run led to the single-tile, encode-once pipeline in section 5.
+
+Current pipeline, first measured run (2026-10-01, Pixel 8, Android 17, 4 threads, vision token cap 256, phone plugged in, model not yet loaded). Camera photo 4080x3072, stored as 771x1024, handed to the model as 386x512 (one tile, 192 image tokens), 82 prompt text tokens:
 
 | Step | Measured value | How measured |
 |---|---|---|
-| Model load (first identify) | not yet measured | `load_ms` in logcat |
-| Image embedding | not yet measured | `embed_ms` in logcat |
-| Text generation | not yet measured | `gen_ms` in logcat |
-| Total (model path) | not yet measured | `total_ms` on a `source=MODEL` line |
-| Total (memory path) | not yet measured | `total_ms` on a `source=MEMORY` line |
+| Model load (first identify) | 2.3 s (language model 1.3 s, projector 0.9 s) | experiment log `phases` model_load, `native_load` |
+| Image embedding | 7.3 s (vision encoder, 4.1 cores busy) | `phases` image_encode, `native_embed.t_encode_ms` |
+| Text generation | 2.05 s (prefill 1.86 s: image tokens 1.08 s, text 0.78 s; then 2 tokens in 0.18 s) | `native_generate` |
+| Total (model path) | 11.6 s including the first load, so about 9.3 s once loaded | run `total_ms` |
+| Total (memory path) | not yet measured | |
+
+CPU and memory for that run: 40.5 s of CPU time in 11.6 s, so 3.5 cores busy on average (39% of the 9 cores) and 4.5 at peak. 64% of the CPU time ran on the mid cores (Cortex-A715, about 2.24 GHz), 28% on the big core (Cortex-X3), 8% on the little cores. App memory rose from 0.2 GB to a 2.2 GB peak (1.4 GB anonymous: repacked language-model weights, the projector, buffers; 0.8 GB memory-mapped model file) and stays near 2 GB while the model is loaded, also in the background. Thermal status stayed "none". The vision encoder is 63% of the total, so the vision token cap in Settings is the main speed lever.
 
 To measure, run this while identifying photos, then read `load_ms`, `embed_ms`, `gen_ms`, and `total_ms`:
 

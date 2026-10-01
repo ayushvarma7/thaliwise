@@ -41,7 +41,7 @@ public final class TelemetryStats {
         public final double avgCurrentMa;
         /** Largest current magnitude in mA, NaN if unavailable. */
         public final double peakCurrentMa;
-        /** Charge drawn from the battery in mAh, NaN if unavailable or the phone was charging. */
+        /** Charge drawn from the battery in mAh, NaN if unavailable or the phone was on external power. */
         public final double energyMah;
 
         Summary(int samples, long wallMs, long cpuMs, double avgCores, double peakCores,
@@ -68,11 +68,11 @@ public final class TelemetryStats {
 
     /**
      * Summarizes samples taken in time order. Energy uses the trapezoid rule over the current readings and
-     * is only reported when the phone was discharging, because a charger hides what the app itself draws.
-     * Android reports discharge current as negative on most devices, so the drawn charge is the
-     * negated integral.
+     * is only reported when the phone ran on battery, because a charger hides what the app itself draws.
+     * Devices disagree on the sign of discharge current, so on battery the drawn charge is the magnitude
+     * of the integral.
      */
-    public static Summary summarize(List<Sample> samples, boolean charging) {
+    public static Summary summarize(List<Sample> samples, boolean externalPower) {
         int n = samples.size();
         if (n == 0) {
             return new Summary(0, 0, 0, 0.0, 0.0, 0, 0, 0, Double.NaN, Double.NaN, Double.NaN);
@@ -116,7 +116,7 @@ public final class TelemetryStats {
             }
         }
         double avgCurrent = currentCount == 0 ? Double.NaN : currentSum / currentCount;
-        double energy = (!charging && integrable && currentCount >= 2) ? Math.abs(Math.min(chargeMaH, 0.0)) : Double.NaN;
+        double energy = (!externalPower && integrable && currentCount >= 2) ? Math.abs(chargeMaH) : Double.NaN;
 
         return new Summary(n, wall, cpu, cores(cpu, wall), peakCores,
                 first.rssKb, last.rssKb, peakRss, avgCurrent, peakCurrent, energy);
