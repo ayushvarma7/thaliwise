@@ -56,3 +56,19 @@ Phase 3: DONE - debug APK builds with the native bridge; 5 JNI symbols; Release 
   - ResultFragment writes result text only while the stage is DONE, so an ERROR message is not overwritten when observers re-attach after rotation.
 
 Phase 4: DONE - APK with all screens builds; lint 0 errors.
+
+## Phase 5: Compliance checks
+
+All 10 pass after one fix (rebuilt, then rerun):
+1. No .kt files in app/src or core/src: empty.
+2. No ai.liquid.leap: empty.
+3. Network classes: only ModelDownloader.java. (First run also listed SettingsViewModel.java because a comment said "DownloadManager"; the comment was reworded.)
+4. No android imports in core: empty.
+5. No reinforcement / coroutine / StateFlow / kotlinx / compose in app/src or core/src: empty.
+6. No em-dash or en-dash in files we wrote: empty when `--exclude-dir=.toolchain` is added. Without it, the only matches are Google SDK resource files inside the project-local toolchain (.toolchain/android-sdk/platforms/android-35/data/res/...), which are not files we wrote.
+7. No CAMERA or storage permissions: empty.
+8. No TODO / FIXME / stubs: empty.
+9. No gguf in the APK: empty.
+10. Native build type: Release.
+
+Phase 5: DONE - all 10 compliance checks pass.

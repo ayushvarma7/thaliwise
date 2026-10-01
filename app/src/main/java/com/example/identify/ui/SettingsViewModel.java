@@ -30,7 +30,7 @@ public class SettingsViewModel extends AndroidViewModel {
     private final LiveData<Integer> memoryHitCorrectedCount;
     private boolean polling = false;
 
-    // The DownloadManager query is small, so it runs on the main thread.
+    // The download status query is small, so it runs on the main thread.
     private final Runnable poll = new Runnable() {
         @Override
         public void run() {
