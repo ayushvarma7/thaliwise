@@ -132,3 +132,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 
 - 9.0 Preflight: DONE - only the new build prompt untracked, last commit bba18cd, :core:test and :app:assembleDebug exit 0.
 - 9.1 Nutrition table and parser: DONE - assets/foods.txt (74 rows), FoodItem, FoodCatalog, FoodCatalogTest 5/5 (incl. shipped table validation).
+- 9.2 Matching and meal math: DONE - FoodMatcher, Meals, FoodMatcherTest 7/7, MealsTest 3/3; 13 core test classes; core android-free.
