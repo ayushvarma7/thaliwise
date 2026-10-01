@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "IdentifyVLM"
-include(":core")
+include(":app", ":core")

@@ -32,3 +32,13 @@ Phase 1: DONE - Gradle 8.9 wrapper, llama.cpp b11323 pinned, all four flags true
 - `grep -rn "import android" core/src`: OK, core is android-free.
 
 Phase 2: DONE - core compiles, all 7 test classes pass.
+
+## Phase 3: :app non-UI layer (gradle, native, data, model, learning)
+
+- `./gradlew :core:test :app:assembleDebug`: BUILD SUCCESSFUL in 1m 7s (first native build, llama.cpp b11323 compiled with NDK 27.2.12479018 / CMake 3.22.1).
+- llvm-nm lists exactly 5 JNI symbols: nativeGenerateWithImage, nativeGetImageEmbedding, nativeLoadModel, nativeSystemInfo, nativeUnloadModel.
+- APK contains lib/arm64-v8a/libvlm-bridge.so (7.2 MB stripped).
+- CMakeCache: CMAKE_BUILD_TYPE=Release. `-march=armv8.2-a+dotprod+i8mm+fp16` reaches the 16 ggml-cpu compile units. LOAD segments aligned to 0x4000 (16 KB pages). MTMD_VIDEO=OFF (auto, because LLAMA_SUBPROCESS=OFF).
+- Native API differences from spec Section 7.7 (5 items) are recorded in NATIVE_API_NOTES.md.
+
+Phase 3: DONE - debug APK builds with the native bridge; 5 JNI symbols; Release native build.

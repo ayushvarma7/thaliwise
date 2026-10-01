@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Identify" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="ShapeAppearance.Identify.Rounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+</resources>
