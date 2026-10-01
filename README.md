@@ -187,3 +187,11 @@ Permissions (each one approved by the user on the Health Connect screen): READ_S
 Settings > Health Connect shows the connection status and today's numbers. Step data comes from whichever app writes it into Health Connect (Fitbit or Google Fit on the test phone), so that app's Health Connect sync must be on. Every read is logged in the experiment log as a `health_read` event, and the permission screen outcome as `health_permission_result`.
 
 First test on the Pixel 8 (2026-10-01, 4:38 PM): 1,502 steps, 1,322 kcal burned (152 active), nothing eaten logged yet. The Google Fit app showed 1,318 steps at the same time; Health Connect combines all step sources, so its total can differ from any single app's count. The "Open Health Connect" button opens Health Connect's home screen (`android.health.connect.action.HEALTH_HOME_SETTINGS`); the SDK's `ACTION_MANAGE_HEALTH_PERMISSIONS` is reserved for system apps and crashes a normal app.
+
+## 12. Food logging
+
+When the identified label matches the nutrition table shipped in `app/src/main/assets/foods.txt` (74 foods: McDonald's US menu items and common foods), the result screen shows "Looks like food" with the calories for one serving. "Log meal" opens a dialog to pick the food (type another name if the guess is wrong), set the portion (0.5x to 3x), and check or edit the calories. "Log" writes one NutritionRecord into Health Connect (calories, protein, carbohydrate, fat, meal name, and a meal type from the time of day), then shows today's eaten, burned, and step totals. "Undo" deletes that record again.
+
+The model only names the food; calories come from the table and the user confirms them. Table values are approximate reference values for one serving (McDonald's US published figures and USDA FoodData Central typical servings, compiled for this prototype), not measurements of the actual plate. Matching (`FoodMatcher` in `:core`) compares words of the label with each food's names and aliases, ignores plurals and filler words, and prefers branded rows only when the brand is named.
+
+Experiment log events: `meal_logged` (run_id, model label, query, food, portion, table kcal, logged kcal, whether the user edited it, macros, meal slot, Health Connect record id, error) and `meal_undone`.
