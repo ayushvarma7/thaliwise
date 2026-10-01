@@ -101,4 +101,30 @@
     <string name="health_open_failed">Could not open Health Connect.</string>
     <string name="privacy_title">Privacy</string>
     <string name="privacy_policy_text">IdentifyVLM reads your steps, calories burned, and logged nutrition from Health Connect only to show your daily progress inside the app. In a later version it will also write meals that you confirm as nutrition records.\n\nAll data stays on this phone. Nothing is sent to any server. The app uses the internet only once, to download the AI model.\n\nYou can remove access at any time in Health Connect.</string>
+
+    <string name="food_detected">Looks like food: %1$s, about %2$s kcal per %3$s.</string>
+    <string name="log_meal_button">Log meal</string>
+    <string name="meal_dialog_title">Log meal in Health Connect</string>
+    <string name="meal_search_hint">Food</string>
+    <string name="meal_no_match">No matching food in the table. Try another name.</string>
+    <string name="meal_choice_format">%1$s, %2$s, %3$s kcal</string>
+    <string name="meal_portion_label">Portion: %1$s x %2$s</string>
+    <string name="meal_kcal_hint">Calories (kcal)</string>
+    <string name="meal_kcal_invalid">Enter calories between 1 and 5000.</string>
+    <string name="meal_slot_format">Meal type: %1$s (from the time of day)</string>
+    <string name="meal_slot_breakfast">breakfast</string>
+    <string name="meal_slot_lunch">lunch</string>
+    <string name="meal_slot_dinner">dinner</string>
+    <string name="meal_slot_snack">snack</string>
+    <string name="meal_source_format">Values: %1$s. They are estimates, so edit the calories if needed.</string>
+    <string name="meal_log_confirm">Log</string>
+    <string name="meal_need_permission">Allow Health Connect in Settings to log meals.</string>
+    <string name="meal_open_settings">Settings</string>
+    <string name="meal_logging">Logging meal</string>
+    <string name="meal_logged">Logged %1$s kcal of %2$s as %3$s.</string>
+    <string name="meal_log_failed">Could not log the meal: %1$s</string>
+    <string name="meal_undo">Undo</string>
+    <string name="meal_undone">Meal removed from Health Connect.</string>
+    <string name="meal_undo_failed">Could not remove the meal: %1$s</string>
+    <string name="meal_today_summary">Today: %1$s kcal eaten, %2$s kcal burned, %3$s of %4$s steps</string>
 </resources>

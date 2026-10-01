@@ -1,6 +1,9 @@
 package com.example.identify.ui;
 
+import android.content.Context;
+import android.health.connect.HealthPermissions;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,19 +19,37 @@ import androidx.navigation.NavDestination;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.bumptech.glide.Glide;
+import com.example.identify.AppPrefs;
 import com.example.identify.Config;
 import com.example.identify.R;
+import com.example.identify.core.FoodItem;
+import com.example.identify.core.FoodMatcher;
+import com.example.identify.core.Meals;
 import com.example.identify.databinding.FragmentResultBinding;
+import com.example.identify.health.FoodRepository;
+import com.example.identify.health.HealthConnectRepository;
+import com.example.identify.util.ExperimentLog;
+import com.google.android.material.snackbar.Snackbar;
+
+import org.json.JSONObject;
 
 import java.io.File;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Locale;
 
 public class ResultFragment extends Fragment {
 
     private static final String KEY_DETAILS_OPEN = "detailsOpen";
+    private static final String KEY_MEAL_RECORD_ID = "mealRecordId";
+    private static final String KEY_MEAL_SUMMARY = "mealSummary";
 
     private FragmentResultBinding binding;
     private ResultViewModel vm;
     private boolean detailsOpen;
+    /** Health Connect id of the meal logged from this screen, kept so Undo can delete it. */
+    private String loggedRecordId;
+    private String loggedSummary;
 
     @Nullable
     @Override
@@ -41,7 +62,11 @@ public class ResultFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (savedInstanceState != null) detailsOpen = savedInstanceState.getBoolean(KEY_DETAILS_OPEN);
+        if (savedInstanceState != null) {
+            detailsOpen = savedInstanceState.getBoolean(KEY_DETAILS_OPEN);
+            loggedRecordId = savedInstanceState.getString(KEY_MEAL_RECORD_ID);
+            loggedSummary = savedInstanceState.getString(KEY_MEAL_SUMMARY);
+        }
         vm = new ViewModelProvider(this).get(ResultViewModel.class);
         String path = requireArguments().getString("imagePath");
         if (path == null) {
@@ -92,12 +117,16 @@ public class ResultFragment extends Fragment {
             detailsOpen = !detailsOpen;
             renderResult();
         });
+        binding.logMealButton.setOnClickListener(v -> onLogMealClicked());
+        binding.undoMealButton.setOnClickListener(v -> onUndoMealClicked());
     }
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(KEY_DETAILS_OPEN, detailsOpen);
+        outState.putString(KEY_MEAL_RECORD_ID, loggedRecordId);
+        outState.putString(KEY_MEAL_SUMMARY, loggedSummary);
     }
 
     @Override
@@ -137,6 +166,7 @@ public class ResultFragment extends Fragment {
                 binding.retryButton.setVisibility(View.GONE);
                 binding.detailsButton.setVisibility(View.GONE);
                 binding.detailsText.setVisibility(View.GONE);
+                binding.foodCard.setVisibility(View.GONE);
                 hideCorrectionViews();
                 break;
             case DONE:
@@ -154,6 +184,7 @@ public class ResultFragment extends Fragment {
                 binding.runModelButton.setVisibility(View.GONE);
                 binding.detailsButton.setVisibility(View.GONE);
                 binding.detailsText.setVisibility(View.GONE);
+                binding.foodCard.setVisibility(View.GONE);
                 hideCorrectionViews();
                 binding.resultCard.setVisibility(View.VISIBLE);
                 binding.labelText.setText("Error");
@@ -183,6 +214,132 @@ public class ResultFragment extends Fragment {
         binding.detailsButton.setText(detailsOpen ? R.string.hide_details : R.string.show_details);
         binding.detailsText.setText(r.details);
         binding.detailsText.setVisibility(hasDetails && detailsOpen ? View.VISIBLE : View.GONE);
+        renderFood(r);
+    }
+
+    /** The food card: shown when the label matches the nutrition table, or after a meal was logged here. */
+    private void renderFood(ResultViewModel.IdentifyResult r) {
+        if (loggedRecordId != null) {
+            binding.foodCard.setVisibility(View.VISIBLE);
+            binding.foodText.setText(loggedSummary);
+            binding.logMealButton.setVisibility(View.GONE);
+            binding.undoMealButton.setVisibility(View.VISIBLE);
+            binding.undoMealButton.setEnabled(true);
+            return;
+        }
+        List<FoodMatcher.Match> matches = FoodMatcher.match(r.label, FoodRepository.foods(requireContext()), 1);
+        if (matches.isEmpty()) {
+            binding.foodCard.setVisibility(View.GONE);
+            return;
+        }
+        FoodItem top = matches.get(0).item;
+        binding.foodCard.setVisibility(View.VISIBLE);
+        binding.foodText.setText(getString(R.string.food_detected, top.displayName(),
+                HealthFormat.kcal(requireContext(), top.kcal), top.serving));
+        binding.foodStatusText.setVisibility(View.GONE);
+        binding.logMealButton.setVisibility(View.VISIBLE);
+        binding.logMealButton.setEnabled(true);
+        binding.undoMealButton.setVisibility(View.GONE);
+    }
+
+    private void onLogMealClicked() {
+        ResultViewModel.IdentifyResult r = vm.getResult().getValue();
+        if (r == null || binding == null) return;
+        Context ctx = requireContext();
+        if (!HealthConnectRepository.isAvailable(ctx)
+                || !HealthConnectRepository.isGranted(ctx, HealthPermissions.WRITE_NUTRITION)) {
+            Snackbar.make(binding.getRoot(), R.string.meal_need_permission, Snackbar.LENGTH_LONG)
+                    .setAction(R.string.meal_open_settings,
+                            v -> NavHostFragment.findNavController(this).navigate(R.id.settingsFragment))
+                    .show();
+            return;
+        }
+        LogMealDialog.show(this, r.label,
+                (food, portion, kcal, kcalEdited, query) -> logMeal(r, food, portion, kcal, kcalEdited, query));
+    }
+
+    /** Writes the meal to Health Connect, logs a meal_logged event, then shows today's totals. */
+    private void logMeal(ResultViewModel.IdentifyResult r, FoodItem food, double portion, double kcal,
+                         boolean kcalEdited, String query) {
+        if (binding == null) return;
+        final Context app = requireContext().getApplicationContext();
+        final Meals.Slot slot = Meals.slotForHour(LocalTime.now().getHour());
+        final double protein = Meals.scaled(food.proteinG, portion);
+        final double carbs = Meals.scaled(food.carbsG, portion);
+        final double fat = Meals.scaled(food.fatG, portion);
+        final long t0 = SystemClock.elapsedRealtime();
+        binding.logMealButton.setEnabled(false);
+        binding.foodStatusText.setVisibility(View.VISIBLE);
+        binding.foodStatusText.setText(R.string.meal_logging);
+        HealthConnectRepository.insertMeal(app, food.name, kcal, protein, carbs, fat, slot, (recordId, error) -> {
+            JSONObject e = ExperimentLog.event("meal_logged");
+            ExperimentLog.put(e, "run_id", r.runId);
+            ExperimentLog.put(e, "model_label", r.label);
+            ExperimentLog.put(e, "query", query);
+            ExperimentLog.put(e, "food_id", food.id);
+            ExperimentLog.put(e, "food_name", food.displayName());
+            ExperimentLog.put(e, "portion", portion);
+            ExperimentLog.put(e, "kcal_logged", kcal);
+            ExperimentLog.put(e, "kcal_table", food.kcal * portion);
+            ExperimentLog.put(e, "kcal_edited", kcalEdited);
+            ExperimentLog.put(e, "protein_g", protein);
+            ExperimentLog.put(e, "carbs_g", carbs);
+            ExperimentLog.put(e, "fat_g", fat);
+            ExperimentLog.put(e, "meal_slot", slot.name().toLowerCase(Locale.ROOT));
+            ExperimentLog.put(e, "hc_record_id", recordId);
+            ExperimentLog.put(e, "ms", SystemClock.elapsedRealtime() - t0);
+            ExperimentLog.put(e, "error", error);
+            ExperimentLog.append(app, e);
+            if (binding == null || !isAdded()) return;
+            if (error != null) {
+                binding.logMealButton.setEnabled(true);
+                binding.foodStatusText.setVisibility(View.GONE);
+                Snackbar.make(binding.getRoot(), getString(R.string.meal_log_failed, error), Snackbar.LENGTH_LONG).show();
+                return;
+            }
+            loggedRecordId = recordId;
+            loggedSummary = getString(R.string.meal_logged, HealthFormat.kcal(app, kcal), food.displayName(),
+                    HealthFormat.slot(app, slot));
+            renderFood(r);
+            showToday();
+        });
+    }
+
+    /** Today's eaten, burned, and step totals under the logged meal. */
+    private void showToday() {
+        final Context app = requireContext().getApplicationContext();
+        final long goal = AppPrefs.get(app).getStepGoal();
+        HealthConnectRepository.readToday(app, (today, error) -> {
+            if (binding == null || !isAdded() || today == null) return;
+            binding.foodStatusText.setVisibility(View.VISIBLE);
+            binding.foodStatusText.setText(getString(R.string.meal_today_summary,
+                    HealthFormat.kcal(app, today.eatenKcal), HealthFormat.kcal(app, today.burnedKcal),
+                    HealthFormat.steps(app, today.steps), HealthFormat.steps(app, goal)));
+        });
+    }
+
+    private void onUndoMealClicked() {
+        if (loggedRecordId == null || binding == null) return;
+        final String id = loggedRecordId;
+        final Context app = requireContext().getApplicationContext();
+        binding.undoMealButton.setEnabled(false);
+        HealthConnectRepository.deleteMeal(app, id, error -> {
+            JSONObject e = ExperimentLog.event("meal_undone");
+            ExperimentLog.put(e, "hc_record_id", id);
+            ExperimentLog.put(e, "error", error);
+            ExperimentLog.append(app, e);
+            if (binding == null || !isAdded()) return;
+            if (error != null) {
+                binding.undoMealButton.setEnabled(true);
+                Snackbar.make(binding.getRoot(), getString(R.string.meal_undo_failed, error), Snackbar.LENGTH_LONG).show();
+                return;
+            }
+            loggedRecordId = null;
+            loggedSummary = null;
+            Snackbar.make(binding.getRoot(), R.string.meal_undone, Snackbar.LENGTH_LONG).show();
+            ResultViewModel.IdentifyResult r = vm.getResult().getValue();
+            if (r != null) renderFood(r);
+        });
     }
 
     private void hideCorrectionViews() {

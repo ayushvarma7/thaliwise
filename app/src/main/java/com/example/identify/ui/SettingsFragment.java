@@ -29,8 +29,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
 
-import java.util.Locale;
-
 public class SettingsFragment extends Fragment {
 
     private static final int SLIDER_MIN = 80;
@@ -245,11 +243,11 @@ public class SettingsFragment extends Fragment {
     }
 
     private String formatSteps(long v) {
-        return v < 0 ? getString(R.string.health_no_data) : String.format(Locale.getDefault(), "%,d", v);
+        return HealthFormat.steps(requireContext(), v);
     }
 
     private String formatKcal(double v) {
-        return Double.isNaN(v) ? getString(R.string.health_no_data) : String.format(Locale.getDefault(), "%,.0f", v);
+        return HealthFormat.kcal(requireContext(), v);
     }
 
     private void refreshUi() {
