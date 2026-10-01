@@ -81,6 +81,12 @@ Phase 6: DONE - README written with all 9 sections, no invented numbers.
 
 ## Phase 7: On-device test
 
-- `adb devices` lists no device.
+- First check: `adb devices` listed no device. The user then connected the phone.
+- Device: Pixel 8 (shiba), Tensor G3, Android 17 (API 37), arm64-v8a, 4 KB pages, 7.7 GB free. /proc/cpuinfo has asimddp (dotprod), i8mm, fphp/asimdhp (fp16), so the armv8.2-a+dotprod+i8mm+fp16 build is safe on it.
+- `adb install -r app-debug.apk`: Success. `am start -W`: cold start 844 ms. Process alive, crash buffer empty, no FATAL EXCEPTION for com.example.identify.
+- Screenshot of the Identify screen: toolbar below the status bar (edge-to-edge handled), model-missing hint and Open settings shown, bottom navigation with Identify / History / Settings.
+- libvlm-bridge.so NEEDED: libandroid, liblog, libm, libdl, libc only (C++ runtime is static).
+- Models dir created; it is empty, so the model is not on the device yet. Not downloaded by the agent (spec rule); the user downloads it in Settings.
+- Note for later: tapping Take photo logs `Implicit URI write grant for ImageCapture action will be discontinued from Android 18 onwards`. Works on Android 17; Android 18 will need an explicit grant on the camera intent.
 
-Phase 7: SKIPPED: no device
+Phase 7: automated part DONE; manual checklist handed to the user, timings pending.
