@@ -25,3 +25,10 @@ Phase 0: DONE - JDK 21, project SDK with NDK 27.2.12479018 and CMake 3.22.1, no 
 - .gitignore has one extra line, `.toolchain/`, so the project-local SDK and Gradle caches are never committed.
 
 Phase 1: DONE - Gradle 8.9 wrapper, llama.cpp b11323 pinned, all four flags true.
+
+## Phase 2: :core module + unit tests
+
+- `./gradlew :core:test`: BUILD SUCCESSFUL. 7 test classes, 34 tests, 0 failures, 0 errors (AnswerParser 5, CosineSimilarity 5, EmbeddingCodec 3, FewShotSelector 6, KnnSearch 5, PromptBuilder 4, SearchMatcher 6).
+- `grep -rn "import android" core/src`: OK, core is android-free.
+
+Phase 2: DONE - core compiles, all 7 test classes pass.
