@@ -8,13 +8,19 @@ import android.health.connect.AggregateRecordsResponse;
 import android.health.connect.HealthConnectException;
 import android.health.connect.HealthConnectManager;
 import android.health.connect.HealthPermissions;
+import android.health.connect.InsertRecordsResponse;
+import android.health.connect.RecordIdFilter;
 import android.health.connect.TimeInstantRangeFilter;
 import android.health.connect.datatypes.ActiveCaloriesBurnedRecord;
 import android.health.connect.datatypes.AggregationType;
+import android.health.connect.datatypes.MealType;
+import android.health.connect.datatypes.Metadata;
 import android.health.connect.datatypes.NutritionRecord;
+import android.health.connect.datatypes.Record;
 import android.health.connect.datatypes.StepsRecord;
 import android.health.connect.datatypes.TotalCaloriesBurnedRecord;
 import android.health.connect.datatypes.units.Energy;
+import android.health.connect.datatypes.units.Mass;
 import android.os.OutcomeReceiver;
 import android.os.SystemClock;
 import android.util.Log;
@@ -23,6 +29,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.identify.Config;
 import com.example.identify.core.DailyHealth;
+import com.example.identify.core.Meals;
 import com.example.identify.util.ExperimentLog;
 
 import org.json.JSONArray;
@@ -31,9 +38,12 @@ import org.json.JSONObject;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 
 /** Reads today's totals from the platform Health Connect API (Android 14+). No library, no network. */
@@ -194,6 +204,111 @@ public final class HealthConnectRepository {
             });
         } catch (RuntimeException e) {   // SecurityException if access was removed a moment ago
             executor.execute(() -> out.done(null, e.toString()));
+        }
+    }
+
+    /** recordId is the Health Connect id of the new record; on failure it is null and error says why. Main thread. */
+    public interface WriteCallback {
+        void onResult(String recordId, String error);
+    }
+
+    /** error is null on success. Main thread. */
+    public interface DeleteCallback {
+        void onResult(String error);
+    }
+
+    public static int mealType(Meals.Slot slot) {
+        switch (slot) {
+            case BREAKFAST: return MealType.MEAL_TYPE_BREAKFAST;
+            case LUNCH: return MealType.MEAL_TYPE_LUNCH;
+            case DINNER: return MealType.MEAL_TYPE_DINNER;
+            default: return MealType.MEAL_TYPE_SNACK;
+        }
+    }
+
+    /**
+     * Writes one meal as a NutritionRecord covering the last minute (the record type has a start and an
+     * end). Energy goes in as small calories, the same unit the reads divide by 1000. NaN macros are skipped.
+     */
+    public static void insertMeal(Context ctx, String mealName, double kcal, double proteinG, double carbsG,
+                                  double fatG, Meals.Slot slot, WriteCallback cb) {
+        final Context app = ctx.getApplicationContext();
+        final HealthConnectManager hc = manager(app);
+        if (hc == null) {
+            cb.onResult(null, "Health Connect is not available on this device");
+            return;
+        }
+        if (!isGranted(app, HealthPermissions.WRITE_NUTRITION)) {
+            cb.onResult(null, "nutrition write permission not granted");
+            return;
+        }
+        Instant end = Instant.now();
+        Instant start = end.minusSeconds(60);
+        ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(end);
+        Metadata metadata = new Metadata.Builder()
+                .setClientRecordId("identifyvlm-meal-" + UUID.randomUUID())
+                .setRecordingMethod(Metadata.RECORDING_METHOD_MANUAL_ENTRY)
+                .build();
+        NutritionRecord.Builder b = new NutritionRecord.Builder(metadata, start, end)
+                .setStartZoneOffset(offset)
+                .setEndZoneOffset(offset)
+                .setMealName(mealName)
+                .setMealType(mealType(slot))
+                .setEnergy(Energy.fromCalories(kcal * 1000.0));
+        if (!Double.isNaN(proteinG)) b.setProtein(Mass.fromGrams(proteinG));
+        if (!Double.isNaN(carbsG)) b.setTotalCarbohydrate(Mass.fromGrams(carbsG));
+        if (!Double.isNaN(fatG)) b.setTotalFat(Mass.fromGrams(fatG));
+        List<Record> records = Collections.<Record>singletonList(b.build());
+        Executor main = ContextCompat.getMainExecutor(app);
+        try {
+            hc.insertRecords(records, main, new OutcomeReceiver<InsertRecordsResponse, HealthConnectException>() {
+                @Override
+                public void onResult(InsertRecordsResponse response) {
+                    List<Record> saved = response.getRecords();
+                    String id = saved.isEmpty() ? null : saved.get(0).getMetadata().getId();
+                    Log.i(Config.HEALTH_TAG, "meal written id=" + id + " kcal=" + kcal + " name=" + mealName);
+                    cb.onResult(id, id == null ? "Health Connect returned no record" : null);
+                }
+
+                @Override
+                public void onError(HealthConnectException e) {
+                    Log.w(Config.HEALTH_TAG, "meal write failed", e);
+                    cb.onResult(null, e.getMessage() == null ? "error " + e.getErrorCode() : e.getMessage());
+                }
+            });
+        } catch (RuntimeException e) {   // SecurityException if access was removed a moment ago
+            Log.w(Config.HEALTH_TAG, "meal write failed", e);
+            main.execute(() -> cb.onResult(null, e.toString()));
+        }
+    }
+
+    /** Deletes a meal this app wrote, by its Health Connect id. */
+    public static void deleteMeal(Context ctx, String recordId, DeleteCallback cb) {
+        final Context app = ctx.getApplicationContext();
+        final HealthConnectManager hc = manager(app);
+        if (hc == null) {
+            cb.onResult("Health Connect is not available on this device");
+            return;
+        }
+        Executor main = ContextCompat.getMainExecutor(app);
+        List<RecordIdFilter> ids = Collections.singletonList(RecordIdFilter.fromId(NutritionRecord.class, recordId));
+        try {
+            hc.deleteRecords(ids, main, new OutcomeReceiver<Void, HealthConnectException>() {
+                @Override
+                public void onResult(Void unused) {
+                    Log.i(Config.HEALTH_TAG, "meal deleted id=" + recordId);
+                    cb.onResult(null);
+                }
+
+                @Override
+                public void onError(HealthConnectException e) {
+                    Log.w(Config.HEALTH_TAG, "meal delete failed", e);
+                    cb.onResult(e.getMessage() == null ? "error " + e.getErrorCode() : e.getMessage());
+                }
+            });
+        } catch (RuntimeException e) {
+            Log.w(Config.HEALTH_TAG, "meal delete failed", e);
+            main.execute(() -> cb.onResult(e.toString()));
         }
     }
 
