@@ -1,10 +1,14 @@
 package com.example.identify.ui;
 
+import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -13,7 +17,9 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.identify.AppPrefs;
 import com.example.identify.Config;
 import com.example.identify.R;
+import com.example.identify.core.DailyHealth;
 import com.example.identify.databinding.FragmentSettingsBinding;
+import com.example.identify.health.HealthConnectRepository;
 import com.example.identify.model.ModelDownloader;
 import com.example.identify.model.VlmEngine;
 import com.example.identify.util.ExperimentLog;
@@ -21,6 +27,8 @@ import com.example.identify.util.Telemetry;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.util.Locale;
 
 public class SettingsFragment extends Fragment {
 
@@ -35,6 +43,25 @@ public class SettingsFragment extends Fragment {
     private int corrections;
     private int memoryHits;
     private int memoryHitsCorrected;
+    private ActivityResultLauncher<String[]> healthPermissionLauncher;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Registered before STARTED, as the Activity Result API requires.
+        healthPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                    if (!isAdded()) return;
+                    HealthConnectRepository.logPermissionResult(requireContext(), result);
+                    if (HealthConnectRepository.missingPermissions(requireContext()).size()
+                            == HealthConnectRepository.PERMISSIONS.length && binding != null) {
+                        Snackbar.make(binding.getRoot(), R.string.health_denied, Snackbar.LENGTH_LONG)
+                                .setAction(R.string.health_open_button, v -> openHealthConnect())
+                                .show();
+                    }
+                    refreshHealth();
+                });
+    }
 
     @Nullable
     @Override
@@ -128,6 +155,16 @@ public class SettingsFragment extends Fragment {
         vm.getMemoryHitCorrectedCount().observe(getViewLifecycleOwner(),
                 n -> { memoryHitsCorrected = n == null ? 0 : n; updateStats(); });
         updateStats();
+
+        binding.healthConnectButton.setOnClickListener(v -> {
+            if (!HealthConnectRepository.isAvailable(requireContext())) {
+                Snackbar.make(binding.getRoot(), R.string.health_unavailable, Snackbar.LENGTH_LONG).show();
+                return;
+            }
+            healthPermissionLauncher.launch(HealthConnectRepository.PERMISSIONS);
+        });
+        binding.healthRefreshButton.setOnClickListener(v -> refreshHealth());
+        binding.healthOpenButton.setOnClickListener(v -> openHealthConnect());
     }
 
     @Override
@@ -135,6 +172,7 @@ public class SettingsFragment extends Fragment {
         super.onResume();
         vm.startPolling();
         refreshUi();
+        refreshHealth();
     }
 
     @Override
@@ -147,6 +185,69 @@ public class SettingsFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    /** Health Connect section: status line, buttons, and today's numbers. Reads once per call, not per poll. */
+    private void refreshHealth() {
+        if (binding == null || !isAdded()) return;
+        Context ctx = requireContext();
+        if (!HealthConnectRepository.isAvailable(ctx)) {
+            binding.healthStatusText.setText(R.string.health_unavailable);
+            binding.healthTodayText.setVisibility(View.GONE);
+            binding.healthConnectButton.setVisibility(View.GONE);
+            binding.healthRefreshButton.setVisibility(View.GONE);
+            binding.healthOpenButton.setVisibility(View.GONE);
+            return;
+        }
+        int needed = HealthConnectRepository.PERMISSIONS.length;
+        int granted = needed - HealthConnectRepository.missingPermissions(ctx).size();
+        if (granted == 0) {
+            binding.healthStatusText.setText(R.string.health_not_connected);
+        } else if (granted < needed) {
+            binding.healthStatusText.setText(getString(R.string.health_partial, granted, needed));
+        } else {
+            binding.healthStatusText.setText(R.string.health_connected);
+        }
+        binding.healthConnectButton.setVisibility(granted < needed ? View.VISIBLE : View.GONE);
+        binding.healthRefreshButton.setVisibility(granted > 0 ? View.VISIBLE : View.GONE);
+        binding.healthOpenButton.setVisibility(View.VISIBLE);
+        if (granted == 0) {
+            binding.healthTodayText.setVisibility(View.GONE);
+            return;
+        }
+        binding.healthTodayText.setVisibility(View.VISIBLE);
+        binding.healthTodayText.setText(R.string.health_loading);
+        HealthConnectRepository.readToday(ctx, (today, error) -> {
+            if (binding == null || !isAdded()) return;
+            if (today == null) {
+                binding.healthTodayText.setText(getString(R.string.health_read_failed, String.valueOf(error)));
+                return;
+            }
+            long goal = prefs.getStepGoal();
+            String text = getString(R.string.health_today_format,
+                    formatSteps(today.steps), formatSteps(goal), formatSteps(today.stepsRemaining(goal)),
+                    formatKcal(today.burnedKcal), formatKcal(today.activeKcal), formatKcal(today.eatenKcal));
+            if (error != null) text = text + "\n" + getString(R.string.health_read_failed, error);
+            binding.healthTodayText.setText(text);
+        });
+    }
+
+    private void openHealthConnect() {
+        try {
+            startActivity(HealthConnectRepository.manageIntent(requireContext()));
+        } catch (ActivityNotFoundException e) {
+            if (binding != null) {
+                Snackbar.make(binding.getRoot(), R.string.health_open_failed, Snackbar.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private String formatSteps(long v) {
+        return v < 0 ? getString(R.string.health_no_data) : String.format(Locale.getDefault(), "%,d", v);
+    }
+
+    private String formatKcal(double v) {
+        return Double.isNaN(v) ? getString(R.string.health_no_data) : String.format(Locale.getDefault(), "%,.0f", v);
     }
 
     private void refreshUi() {

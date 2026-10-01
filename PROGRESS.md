@@ -122,3 +122,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 8.3 Config and prefs: DONE - Config.HEALTH_TAG "IdentifyHealth", Config.DEFAULT_STEP_GOAL 10000, AppPrefs get/setStepGoal (key step_goal); compileDebugJavaWithJavac exit 0.
 - 8.4 :core DailyHealth: DONE - DailyHealth + DailyHealthTest (4 tests pass); 10 core test classes; core is android-free.
 - 8.5 HealthConnectRepository: DONE - platform android.health.connect reader (4 aggregates, permission helpers, manage intent, experiment-log events); compileDebugJavaWithJavac exit 0.
+- 8.7 Strings and Settings UI: DONE - Health Connect section in Settings (status, today, Connect/Refresh/Open); :core:test, :app:assembleDebug, :app:lintDebug BUILD SUCCESSFUL, lint 0 errors, 23 warnings.
