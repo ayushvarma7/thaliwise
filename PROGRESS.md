@@ -131,3 +131,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 ## Phase 9: Food logging
 
 - 9.0 Preflight: DONE - only the new build prompt untracked, last commit bba18cd, :core:test and :app:assembleDebug exit 0.
+- 9.1 Nutrition table and parser: DONE - assets/foods.txt (74 rows), FoodItem, FoodCatalog, FoodCatalogTest 5/5 (incl. shipped table validation).
