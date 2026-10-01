@@ -72,3 +72,15 @@ All 10 pass after one fix (rebuilt, then rerun):
 10. Native build type: Release.
 
 Phase 5: DONE - all 10 compliance checks pass.
+
+## Phase 6: README.md
+
+- README.md has all 9 sections. Performance table says "not yet measured" for every row (no device). Compliance check 6 still passes.
+
+Phase 6: DONE - README written with all 9 sections, no invented numbers.
+
+## Phase 7: On-device test
+
+- `adb devices` lists no device.
+
+Phase 7: SKIPPED: no device
