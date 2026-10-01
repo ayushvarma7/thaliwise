@@ -1,0 +1,13 @@
+<resources>
+    <color name="brand_green">#81C784</color>
+    <color name="on_brand_green">#0B3D0F</color>
+    <color name="brand_green_container">#1B5E20</color>
+    <color name="on_brand_green_container">#C8E6C9</color>
+    <color name="brand_orange">#FFB74D</color>
+    <color name="on_brand_orange">#3E1C00</color>
+    <color name="brand_orange_container">#7A3500</color>
+    <color name="on_brand_orange_container">#FFE0B2</color>
+    <color name="kcal_ok">#81C784</color>
+    <color name="kcal_over">#EF9A9A</color>
+    <color name="steps_bar">#FFB74D</color>
+</resources>

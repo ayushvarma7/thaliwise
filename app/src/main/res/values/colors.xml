@@ -1,4 +1,16 @@
 <resources>
     <color name="accept_green">#2E7D32</color>
     <color name="correct_amber">#FF8F00</color>
+
+    <color name="brand_green">#2E7D32</color>
+    <color name="on_brand_green">#FFFFFF</color>
+    <color name="brand_green_container">#C8E6C9</color>
+    <color name="on_brand_green_container">#0B3D0F</color>
+    <color name="brand_orange">#E65100</color>
+    <color name="on_brand_orange">#FFFFFF</color>
+    <color name="brand_orange_container">#FFE0B2</color>
+    <color name="on_brand_orange_container">#3E1C00</color>
+    <color name="kcal_ok">#2E7D32</color>
+    <color name="kcal_over">#C62828</color>
+    <color name="steps_bar">#E65100</color>
 </resources>

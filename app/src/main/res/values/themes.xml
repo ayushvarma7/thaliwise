@@ -1,5 +1,15 @@
 <resources>
-    <style name="Theme.Identify" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.Identify" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_green</item>
+        <item name="colorOnPrimary">@color/on_brand_green</item>
+        <item name="colorPrimaryContainer">@color/brand_green_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_brand_green_container</item>
+        <item name="colorSecondary">@color/brand_orange</item>
+        <item name="colorOnSecondary">@color/on_brand_orange</item>
+        <item name="colorSecondaryContainer">@color/brand_orange_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_brand_orange_container</item>
+        <item name="colorTertiary">@color/brand_orange</item>
+    </style>
     <style name="ShapeAppearance.Identify.Rounded" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item>
