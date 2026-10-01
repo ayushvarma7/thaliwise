@@ -121,3 +121,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 8.6 Privacy policy screen: DONE - activity_privacy_policy.xml and PrivacyPolicyActivity added, privacy_title and privacy_policy_text strings added; :app:assembleDebug exit 0.
 - 8.3 Config and prefs: DONE - Config.HEALTH_TAG "IdentifyHealth", Config.DEFAULT_STEP_GOAL 10000, AppPrefs get/setStepGoal (key step_goal); compileDebugJavaWithJavac exit 0.
 - 8.4 :core DailyHealth: DONE - DailyHealth + DailyHealthTest (4 tests pass); 10 core test classes; core is android-free.
+- 8.5 HealthConnectRepository: DONE - platform android.health.connect reader (4 aggregates, permission helpers, manage intent, experiment-log events); compileDebugJavaWithJavac exit 0.
