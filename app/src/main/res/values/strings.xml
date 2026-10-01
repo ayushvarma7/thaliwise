@@ -95,7 +95,7 @@
     <string name="health_denied">No access granted. Open Health Connect to allow it.</string>
     <string name="health_open_failed">Could not open Health Connect.</string>
     <string name="privacy_title">Privacy</string>
-    <string name="privacy_policy_text">IdentifyVLM reads your steps, calories burned, and logged nutrition from Health Connect only to show your daily progress inside the app. In a later version it will also write meals that you confirm as nutrition records.\n\nAll data stays on this phone. Nothing is sent to any server. The app uses the internet only once, to download the AI model.\n\nYou can remove access at any time in Health Connect.</string>
+    <string name="privacy_policy_text">IdentifyVLM reads your steps, calories burned, and logged meals from Health Connect only to show your daily progress inside the app. It writes a meal into Health Connect only when you tap Log, and deletes only meals that it wrote, when you ask.\n\nYour profile (name, age, sex, height, weight, activity, goals, and food preferences) is used only to compute your calorie budget and step goal and to favor your cuisines.\n\nAll data stays on this phone. Nothing is sent to any server. The app uses the internet only once, to download the AI model.\n\nYou can remove access at any time in Health Connect.</string>
 
     <string name="log_meal_button">Log meal</string>
     <string name="meal_dialog_title">Log meal in Health Connect</string>

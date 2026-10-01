@@ -4,7 +4,7 @@
     <!-- Used ONLY by ModelDownloader for the one-time model download. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Health Connect. Read today's steps and calories; WRITE_NUTRITION is for logging meals in a later phase. -->
+    <!-- Health Connect. Read today's steps, calories, and meals; WRITE_NUTRITION logs and deletes this app's meals. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
