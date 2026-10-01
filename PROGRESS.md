@@ -135,3 +135,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 9.2 Matching and meal math: DONE - FoodMatcher, Meals, FoodMatcherTest 7/7, MealsTest 3/3; 13 core test classes; core android-free.
 - 9.3 Health Connect write/delete and food loader: DONE - FoodRepository, HealthConnectRepository.insertMeal/deleteMeal/mealType; compileDebugJavaWithJavac exit 0.
 - 9.4 UI: DONE - food card + Log meal dialog + Undo on the result screen, HealthFormat shared formatting; :core:test, :app:assembleDebug, :app:lintDebug BUILD SUCCESSFUL, lint 0 errors, 23 warnings (unchanged set).
+- 9.5 Compliance checks: DONE - all 11 pass (no .kt, no androidx.health, network only in ModelDownloader, core android-free, no forbidden words, no dashes, no camera/storage permission, no TODO, 74 food rows, still 5 health permissions, database version 1).
