@@ -155,3 +155,4 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 
 - 11.0 Specs: DONE - docs/phase11/ step files and USER_STORIES E8/E9 committed before execution (6e8a81a); replayed on the working tree with 0 mismatches.
 - 11.1 Food tags: DONE - food_tags.txt for all 300 foods (same ids and order), FoodTag, FoodTags parser, DietRules; FoodTagsTest and DietRulesTest pass (19 core classes).
+- 11.2 Coach core: DONE - WalkMath (ACSM 3.5 MET, 100 steps/min, 70 kg default), Tip, Coach.forMeal (up to 3 tips) and Coach.forDay (1 tip); WalkMathTest and CoachTest (incl. the 3,200 of 10,000 steps, 450 kcal scenario) pass, 21 core classes, 108 tests.
