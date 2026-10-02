@@ -15,16 +15,20 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.identify.AppPrefs;
 import com.example.identify.R;
+import com.example.identify.core.Coach;
 import com.example.identify.core.DailyHealth;
 import com.example.identify.core.Diary;
+import com.example.identify.core.Tip;
 import com.example.identify.core.UserProfile;
 import com.example.identify.databinding.FragmentTodayBinding;
 import com.example.identify.health.HealthConnectRepository;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.Locale;
 
 /** Home screen: calories eaten against the budget, burned, steps against the goal, and today's meals. */
@@ -34,6 +38,9 @@ public class TodayFragment extends Fragment {
 
     private FragmentTodayBinding binding;
     private MealAdapter adapter;
+    /** The day tip on screen, and the kind last written to the log, so a refresh does not log it twice. */
+    private Tip dayTip;
+    private Tip.Kind loggedDayTip;
 
     @Nullable
     @Override
@@ -56,6 +63,7 @@ public class TodayFragment extends Fragment {
                 NavHostFragment.findNavController(this).navigate(R.id.action_today_to_camera));
         binding.connectButton.setOnClickListener(v ->
                 NavHostFragment.findNavController(this).navigate(R.id.settingsFragment));
+        binding.todayCoachDismissButton.setOnClickListener(v -> dismissDayTip());
     }
 
     @Override
@@ -91,6 +99,7 @@ public class TodayFragment extends Fragment {
         binding.burnedText.setText(getString(R.string.today_burned,
                 HealthFormat.kcal(ctx, Double.NaN), HealthFormat.kcal(ctx, Double.NaN)));
         if (!connected) {
+            binding.todayCoachCard.setVisibility(View.GONE);
             adapter.submitList(null);
             binding.mealsEmptyText.setVisibility(View.VISIBLE);
             return;
@@ -102,6 +111,7 @@ public class TodayFragment extends Fragment {
             renderSteps(today.steps, goal);
             binding.burnedText.setText(getString(R.string.today_burned,
                     HealthFormat.kcal(ctx, today.burnedKcal), HealthFormat.kcal(ctx, today.activeKcal)));
+            renderDayTip(today, budget, goal);
         });
         final ZoneId zone = ZoneId.systemDefault();
         Instant start = LocalDate.now(zone).atStartOfDay(zone).toInstant();
@@ -110,6 +120,36 @@ public class TodayFragment extends Fragment {
             adapter.submitList(Diary.mealRows(meals, zone));
             binding.mealsEmptyText.setVisibility(meals.isEmpty() ? View.VISIBLE : View.GONE);
         });
+    }
+
+    /** One coach line for the day (US-8.5); hidden when coach tips are off, hidden today, or nothing applies. */
+    private void renderDayTip(DailyHealth today, long budget, long goal) {
+        Context ctx = requireContext();
+        AppPrefs prefs = AppPrefs.get(ctx);
+        UserProfile p = prefs.getProfile();
+        boolean hiddenToday = prefs.getCoachDismissedDay() == LocalDate.now().toEpochDay();
+        dayTip = prefs.isCoachEnabled() && !hiddenToday
+                ? Coach.forDay(p, budget, goal, new Coach.Day(today.steps, today.eatenKcal, LocalTime.now().getHour()))
+                : null;
+        if (dayTip == null) {
+            binding.todayCoachCard.setVisibility(View.GONE);
+            return;
+        }
+        binding.todayCoachCard.setVisibility(View.VISIBLE);
+        binding.todayCoachText.setText(TipFormat.text(ctx, dayTip, p.name));
+        if (dayTip.kind != loggedDayTip) {
+            loggedDayTip = dayTip.kind;
+            CoachEvents.shown(ctx, "today", null, null, Collections.singletonList(dayTip));
+        }
+    }
+
+    /** Hides the day tip until tomorrow. */
+    private void dismissDayTip() {
+        AppPrefs.get(requireContext()).setCoachDismissedDay(LocalDate.now().toEpochDay());
+        binding.todayCoachCard.setVisibility(View.GONE);
+        if (dayTip != null) {
+            CoachEvents.dismissed(requireContext(), "today", null, Collections.singletonList(dayTip));
+        }
     }
 
     private void renderCalories(double eatenKcal, long budget) {

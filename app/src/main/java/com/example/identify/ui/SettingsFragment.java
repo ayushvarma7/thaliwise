@@ -88,6 +88,12 @@ public class SettingsFragment extends Fragment {
 
         binding.downloadProgress.setMax(1000);
 
+        binding.coachSwitch.setChecked(prefs.isCoachEnabled());
+        binding.coachSwitch.setOnCheckedChangeListener((button, checked) -> {
+            prefs.setCoachEnabled(checked);
+            if (button.isPressed()) vm.logSettingChange("coach_enabled", checked);
+        });
+
         binding.memorySwitch.setChecked(prefs.isMemoryEnabled());
         binding.memorySwitch.setOnCheckedChangeListener((button, checked) -> {
             prefs.setMemoryEnabled(checked);

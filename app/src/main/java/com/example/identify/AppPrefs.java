@@ -33,6 +33,8 @@ public final class AppPrefs {
     private static final String KEY_CUISINES = "profile_cuisines";
     private static final String KEY_DIET = "profile_diet";
     private static final String KEY_EAT_MORE = "profile_eat_more";
+    private static final String KEY_COACH = "coach_enabled";
+    private static final String KEY_COACH_DISMISSED_DAY = "coach_dismissed_day";
 
     private static volatile AppPrefs instance;
 
@@ -95,6 +97,18 @@ public final class AppPrefs {
     public boolean usesUsUnits() { return prefs.getBoolean(KEY_US_UNITS, true); }
 
     public void setUsUnits(boolean us) { prefs.edit().putBoolean(KEY_US_UNITS, us).apply(); }
+
+    /** Coach tips on Today and the result screen (US-8.6); on by default. */
+    public boolean isCoachEnabled() { return prefs.getBoolean(KEY_COACH, true); }
+
+    public void setCoachEnabled(boolean on) { prefs.edit().putBoolean(KEY_COACH, on).apply(); }
+
+    /** The local day (epoch day) on which the Today tip was hidden; -1 when never. */
+    public long getCoachDismissedDay() { return prefs.getLong(KEY_COACH_DISMISSED_DAY, -1L); }
+
+    public void setCoachDismissedDay(long epochDay) {
+        prefs.edit().putLong(KEY_COACH_DISMISSED_DAY, epochDay).apply();
+    }
 
     /** The onboarding answers; safe defaults when onboarding never ran. */
     public UserProfile getProfile() {

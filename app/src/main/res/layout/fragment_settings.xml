@@ -43,6 +43,13 @@
                 android:text="@string/history_button" />
         </LinearLayout>
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/coach_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/coach_switch" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

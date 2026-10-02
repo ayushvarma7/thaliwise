@@ -248,4 +248,33 @@
     <string name="profile_none">none</string>
     <string name="edit_profile">Edit profile</string>
     <string name="history_button">Identification history</string>
+
+    <string name="coach_title">Coach</string>
+    <string name="coach_note">Estimates from typical recipes and servings.</string>
+    <string name="coach_dismiss">Dismiss</string>
+    <string name="coach_dismiss_today">Hide for today</string>
+    <string name="coach_switch">Coach tips on Today and after identifying a meal</string>
+    <string name="tip_diet_conflict">Usually contains %1$s, and your profile says %2$s.</string>
+    <string name="tip_walk_named">%1$s, you are at %2$s of %3$s steps and this meal is about %4$s kcal. A %5$s minute walk (about %6$s steps) burns about %7$s kcal.</string>
+    <string name="tip_walk">You are at %1$s of %2$s steps and this meal is about %3$s kcal. A %4$s minute walk (about %5$s steps) burns about %6$s kcal.</string>
+    <string name="tip_over_budget">This meal takes you about %1$s kcal over your %2$s kcal budget for today.</string>
+    <string name="tip_protein_good">Good for your protein goal: about %1$s g of protein.</string>
+    <string name="tip_veggie_good">Nice, this one comes with vegetables.</string>
+    <string name="tip_fried_note">This one is usually fried. A grilled or baked version is a lighter swap next time.</string>
+    <string name="tip_sweet_note">This one is usually high in added sugar.</string>
+    <string name="tip_portion_note">A half portion is about %1$s kcal. You can pick the portion when you log.</string>
+    <string name="tip_budget_left">After this meal you still have about %1$s kcal to reach today\'s goal.</string>
+    <string name="tip_day_over_budget">You are about %1$s kcal over today\'s budget. A %2$s minute walk burns about %3$s kcal.</string>
+    <string name="tip_day_goal_reached">Step goal reached with %1$s steps. Nice work.</string>
+    <string name="tip_day_steps_left_named">%1$s, %2$s steps to go today. That is about a %3$s minute walk.</string>
+    <string name="tip_day_steps_left">%1$s steps to go today. That is about a %2$s minute walk.</string>
+    <string name="tip_day_on_track">On track: about %1$s kcal left in today\'s budget.</string>
+    <string name="tag_meat">meat</string>
+    <string name="tag_pork">pork</string>
+    <string name="tag_fish">fish</string>
+    <string name="tag_shellfish">shellfish</string>
+    <string name="tag_egg">egg</string>
+    <string name="tag_dairy">dairy</string>
+    <string name="tag_gluten">gluten</string>
+    <string name="tag_alcohol">alcohol</string>
 </resources>

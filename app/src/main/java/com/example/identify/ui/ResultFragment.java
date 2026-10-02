@@ -21,9 +21,13 @@ import com.bumptech.glide.Glide;
 import com.example.identify.AppPrefs;
 import com.example.identify.Config;
 import com.example.identify.R;
+import com.example.identify.core.Coach;
+import com.example.identify.core.DailyHealth;
 import com.example.identify.core.FoodItem;
 import com.example.identify.core.FoodMatcher;
 import com.example.identify.core.Meals;
+import com.example.identify.core.Tip;
+import com.example.identify.core.UserProfile;
 import com.example.identify.databinding.FragmentResultBinding;
 import com.example.identify.health.FoodRepository;
 import com.example.identify.health.HealthConnectRepository;
@@ -34,6 +38,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -47,6 +52,8 @@ public class ResultFragment extends Fragment {
     private static final String KEY_MEAL_RECORD_ID = "mealRecordId";
     private static final String KEY_MEAL_SUMMARY = "mealSummary";
     private static final String KEY_FEEDBACK_SAVED = "feedbackSaved";
+    private static final String KEY_COACH_DISMISSED = "coachDismissed";
+    private static final String KEY_COACH_LOGGED = "coachLogged";
 
     private FragmentResultBinding binding;
     private ResultViewModel vm;
@@ -55,6 +62,13 @@ public class ResultFragment extends Fragment {
     private String loggedRecordId;
     private String loggedSummary;
     private boolean feedbackSaved;
+    /** Today's numbers for the coach card, read once per screen; null until that read finishes. */
+    private DailyHealth coachToday;
+    private boolean coachReadStarted;
+    private boolean coachDismissed;
+    /** True once nudge_shown was logged for this photo. */
+    private boolean coachLogged;
+    private List<Tip> coachTips = new ArrayList<>();
 
     @Nullable
     @Override
@@ -72,6 +86,8 @@ public class ResultFragment extends Fragment {
             loggedRecordId = savedInstanceState.getString(KEY_MEAL_RECORD_ID);
             loggedSummary = savedInstanceState.getString(KEY_MEAL_SUMMARY);
             feedbackSaved = savedInstanceState.getBoolean(KEY_FEEDBACK_SAVED);
+            coachDismissed = savedInstanceState.getBoolean(KEY_COACH_DISMISSED);
+            coachLogged = savedInstanceState.getBoolean(KEY_COACH_LOGGED);
         }
         vm = new ViewModelProvider(this).get(ResultViewModel.class);
         String path = requireArguments().getString("imagePath");
@@ -96,6 +112,7 @@ public class ResultFragment extends Fragment {
         binding.retakeButton.setOnClickListener(v -> NavHostFragment.findNavController(this).popBackStack());
         binding.doneButton.setOnClickListener(v -> goToday());
         binding.undoMealButton.setOnClickListener(v -> onUndoMealClicked());
+        binding.coachDismissButton.setOnClickListener(v -> dismissCoach());
         binding.runModelButton.setOnClickListener(v -> vm.runModelAnyway());
         binding.retryButton.setOnClickListener(v -> vm.retry());
         binding.detailsButton.setOnClickListener(v -> {
@@ -111,6 +128,8 @@ public class ResultFragment extends Fragment {
         outState.putString(KEY_MEAL_RECORD_ID, loggedRecordId);
         outState.putString(KEY_MEAL_SUMMARY, loggedSummary);
         outState.putBoolean(KEY_FEEDBACK_SAVED, feedbackSaved);
+        outState.putBoolean(KEY_COACH_DISMISSED, coachDismissed);
+        outState.putBoolean(KEY_COACH_LOGGED, coachLogged);
     }
 
     @Override
@@ -151,6 +170,7 @@ public class ResultFragment extends Fragment {
             binding.kcalCard.setVisibility(View.GONE);
             binding.noFoodCard.setVisibility(View.GONE);
             binding.loggedCard.setVisibility(View.GONE);
+            binding.coachCard.setVisibility(View.GONE);
             binding.runModelButton.setVisibility(View.GONE);
             binding.detailsButton.setVisibility(View.GONE);
             binding.detailsText.setVisibility(View.GONE);
@@ -190,6 +210,7 @@ public class ResultFragment extends Fragment {
         if (loggedRecordId != null) {
             binding.kcalCard.setVisibility(View.GONE);
             binding.noFoodCard.setVisibility(View.GONE);
+            binding.coachCard.setVisibility(View.GONE);
             binding.loggedCard.setVisibility(View.VISIBLE);
             binding.loggedText.setText(loggedSummary);
             binding.undoMealButton.setEnabled(true);
@@ -199,6 +220,7 @@ public class ResultFragment extends Fragment {
         FoodItem top = topMatch(r);
         if (top == null) {
             binding.kcalCard.setVisibility(View.GONE);
+            binding.coachCard.setVisibility(View.GONE);
             binding.noFoodCard.setVisibility(View.VISIBLE);
             binding.noFoodText.setText(getString(R.string.no_food_text, r.label));
             return;
@@ -211,6 +233,53 @@ public class ResultFragment extends Fragment {
         binding.foodMatchText.setText(getString(R.string.food_match_format, top.displayName(), top.cuisine));
         binding.logMealButton.setEnabled(true);
         binding.logMealButton.setText(R.string.log_meal_button);
+        renderCoach(r, top);
+    }
+
+    /**
+     * Coach tips for the guessed food at one serving, under the kcal card and before logging (US-8.1 to
+     * US-8.4). Today's numbers are read once; without Health Connect only the diet and eat-more rules apply.
+     */
+    private void renderCoach(ResultViewModel.IdentifyResult r, FoodItem top) {
+        Context ctx = requireContext();
+        AppPrefs prefs = AppPrefs.get(ctx);
+        if (coachDismissed || !prefs.isCoachEnabled()) {
+            binding.coachCard.setVisibility(View.GONE);
+            return;
+        }
+        if (coachToday == null) {
+            binding.coachCard.setVisibility(View.GONE);
+            if (coachReadStarted) return;
+            coachReadStarted = true;
+            HealthConnectRepository.readToday(ctx.getApplicationContext(), (today, error) -> {
+                coachToday = today != null
+                        ? today
+                        : new DailyHealth(DailyHealth.UNKNOWN_STEPS, Double.NaN, Double.NaN, Double.NaN);
+                renderResult();
+            });
+            return;
+        }
+        UserProfile p = prefs.getProfile();
+        Coach.Day day = new Coach.Day(coachToday.steps, coachToday.eatenKcal, LocalTime.now().getHour());
+        Coach.Meal meal = new Coach.Meal(top.kcal, top.proteinG, FoodRepository.tagsOf(ctx, top.id));
+        coachTips = Coach.forMeal(p, prefs.getCalorieBudget(), prefs.getStepGoal(), day, meal);
+        if (coachTips.isEmpty()) {
+            binding.coachCard.setVisibility(View.GONE);
+            return;
+        }
+        binding.coachCard.setVisibility(View.VISIBLE);
+        binding.coachText.setText(TipFormat.join(ctx, coachTips, p.name));
+        if (!coachLogged) {
+            coachLogged = true;
+            CoachEvents.shown(ctx, "result", r.runId, top.id, coachTips);
+        }
+    }
+
+    private void dismissCoach() {
+        coachDismissed = true;
+        binding.coachCard.setVisibility(View.GONE);
+        ResultViewModel.IdentifyResult r = vm.getResult().getValue();
+        CoachEvents.dismissed(requireContext(), "result", r == null ? null : r.runId, coachTips);
     }
 
     /** Best table row for the model's label, using its cuisine and the user's favorite cuisines. */
@@ -271,6 +340,8 @@ public class ResultFragment extends Fragment {
             ExperimentLog.put(e, "carbs_g", carbs);
             ExperimentLog.put(e, "fat_g", fat);
             ExperimentLog.put(e, "meal_slot", slot.name().toLowerCase(Locale.ROOT));
+            ExperimentLog.put(e, "coach_tips",
+                    CoachEvents.kinds(coachLogged && !coachDismissed ? coachTips : new ArrayList<>()));
             ExperimentLog.put(e, "hc_record_id", recordId);
             ExperimentLog.put(e, "ms", SystemClock.elapsedRealtime() - t0);
             ExperimentLog.put(e, "error", error);
