@@ -231,4 +231,22 @@ The answers are stored in the app's SharedPreferences and logged locally as `pro
 - **Diary**: the last 7 days of meals grouped by day with daily totals. Tapping a meal this app logged deletes it after a confirmation; meals from other apps point to Health Connect.
 - **Settings**: the profile summary with Edit profile and Identification history (the old History screen), then the model, memory, performance, telemetry, and Health Connect sections as before.
 
+**Coach (Phase 11):** see section 14.
+
 **Learning without Accept and Correct buttons:** logging a meal is the feedback. If the logged food is the table row the app guessed, the photo is saved as an accept; if it is another food, as a correction to that food's name. This happens once per photo, and the memory and few-shot layers (section 5) use it as before.
+
+## 14. Coach tips
+
+Phase 11 uses the onboarding answers that Phase 10 stored (`docs/USER_STORIES.md` E8). The coach is a set of plain rules in `:core` (`Coach`, `DietRules`, `WalkMath`), not a model. It shows short tips where the user decides, and never blocks or delays logging.
+
+- **Result screen, before logging:** a Coach card under the kcal card with up to 3 tips for the guessed food at one serving: diet warnings ("Usually contains meat, and your profile says Vegetarian."), a walk tip when the step goal is not reached and the meal is big or goes over budget ("Ayush, you are at 3,200 of 10,000 steps and this meal is about 450 kcal. A 30 minute walk (about 3,000 steps) burns about 141 kcal."), an over-budget note, and feedback on the "eat more of" answers (protein, vegetables, fried, sugar, portions). Dismiss hides it for that photo.
+- **Today:** one line (over budget with a walk suggestion, step goal reached, steps left after 5 PM, or kcal left), with "Hide for today".
+- **Settings:** "Coach tips" switch, on by default.
+
+Data behind the tips: `app/src/main/assets/food_tags.txt` says what each of the 300 foods usually contains (meat, pork, fish, shellfish, egg, dairy, gluten, alcohol) and whether it is usually fried, sweet, or has vegetables. These are typical recipes, so the wording is always "usually". Walk numbers use 3.5 MET moderate walking at about 100 steps a minute (kcal per minute = 3.5 x 3.5 x kg / 200), with 70 kg when the weight was not given.
+
+Experiment log: `nudge_shown` and `nudge_dismissed` (screen, run_id, food_id, kinds, and each tip with its numbers), and `meal_logged.coach_tips` (the kinds on screen when the meal was logged). Joining them shows which tips change what people log.
+
+Limits: Kosher covers pork and shellfish only (not meat with dairy or certification), Halal covers pork and alcohol only, and the tags describe common recipes, not the photo. There are no push notifications; tips appear only inside the app.
+
+Device test (Pixel 8, 2026-10-02): the Phase 11 build was installed at the user's request and used normally; the result-screen Coach card (walk and protein tips) and the Today line appeared. The same use showed that the model sometimes copies prompt wording into its label and answers packaged food in free text; step 11.5 fixes both. By the user's choice, phone screenshots and on-device logs are not used for further testing without their explicit approval.
