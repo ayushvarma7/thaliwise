@@ -1,10 +1,12 @@
-# IdentifyVLM
+# ThaliWise
 
 ## 1. What this is
 
-IdentifyVLM is a private, offline food and activity companion for Android. You snap a meal; Liquid AI's LFM2.5-VL-1.6B vision language model, running on the phone through llama.cpp, names the dish and its cuisine; the app finds the calories for a typical serving in a 320-row table, lets you confirm the portion, and logs the meal into Health Connect next to the steps and calories burned that Fitbit or Google Fit record. The home screen shows calories eaten against a personal budget from a short onboarding profile, steps against a goal, and today's meals.
+ThaliWise is a private, offline food and activity companion for Android. You snap a meal; Liquid AI's LFM2.5-VL-1.6B vision language model, running on the phone through llama.cpp, names the dish and its cuisine; the app finds the calories for a typical serving in a 320-row table, lets you confirm the portion, and logs the meal into Health Connect next to the steps and calories burned that Fitbit or Google Fit record. The home screen shows calories eaten against a personal budget from a short onboarding profile, steps against a goal, and today's meals.
 
 The app is written in pure Java (with a small C++ JNI bridge) and adapts to one user through a local memory of their past corrections. After a one-time model download of about 1.3 GB, it works fully offline. Personas, the profiling questions, user stories, and the UI storyboard are in `docs/USER_STORIES.md`.
+
+The project was called IdentifyVLM until 2026-10-02. The Android package id stays `com.example.identify`, so an installed copy updates in place and keeps its model files, profile, and history, and the original local checkout folder is still named `IdentifyVLM`.
 
 ## 2. Requirements
 
@@ -21,8 +23,8 @@ In the original checkout, the SDK, NDK, CMake, and Gradle caches live inside the
 ## 3. Clone and build
 
 ```bash
-git clone --recurse-submodules <repo-url> IdentifyVLM
-cd IdentifyVLM            # or: git submodule update --init --recursive
+git clone --recurse-submodules https://github.com/ayushvarma7/thaliwise.git
+cd thaliwise              # or: git submodule update --init --recursive
 ./gradlew :core:test
 ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk

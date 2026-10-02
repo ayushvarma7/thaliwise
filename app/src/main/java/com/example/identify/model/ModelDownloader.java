@@ -74,7 +74,7 @@ public final class ModelDownloader {
         // DownloadManager renames to name-1.gguf when the target already exists.
         if (target.exists() && !target.delete()) Log.w(Config.LOG_TAG, "could not delete " + target);
         DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url))
-                .setTitle("IdentifyVLM model")
+                .setTitle("ThaliWise model")
                 .setDescription(fileName)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalFilesDir(ctx, null, "models/" + fileName)

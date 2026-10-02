@@ -1,8 +1,8 @@
-# IdentifyVLM: product, user profiling, user stories, and UI storyboard
+# ThaliWise: product, user profiling, user stories, and UI storyboard
 
 ## 1. Product in one paragraph
 
-IdentifyVLM is a private, offline food and activity companion for Android. You snap a meal; an on-device vision model names the dish and its cuisine; the app finds the calories for a typical serving, lets you confirm the portion, and logs the meal into Health Connect next to the steps and calories burned that Fitbit or Google Fit already record. The home screen answers one question at a glance: "How am I doing today?" Nothing leaves the phone except the one-time model download.
+ThaliWise is a private, offline food and activity companion for Android. You snap a meal; an on-device vision model names the dish and its cuisine; the app finds the calories for a typical serving, lets you confirm the portion, and logs the meal into Health Connect next to the steps and calories burned that Fitbit or Google Fit already record. The home screen answers one question at a glance: "How am I doing today?" Nothing leaves the phone except the one-time model download.
 
 ## 2. Personas
 

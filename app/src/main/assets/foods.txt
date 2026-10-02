@@ -1,4 +1,4 @@
-# IdentifyVLM nutrition table. One food per line, 12 fields separated by ';':
+# ThaliWise nutrition table. One food per line, 12 fields separated by ';':
 # id;name;brand;cuisine;aliases;serving;grams;kcal;protein_g;carbs_g;fat_g;source
 # Aliases are separated by '|'. Values are for one serving and are approximate reference values.
 mcd_double_cheeseburger;Double Cheeseburger;McDonald's;Fast food;double cheeseburger|double cheese burger;sandwich;165;450;25;34;24;McDonald's US published nutrition (approximate)

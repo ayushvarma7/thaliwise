@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "IdentifyVLM"
+rootProject.name = "thaliwise"
 include(":app", ":core")
