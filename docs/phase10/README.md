@@ -11,6 +11,7 @@ This folder is the single source of truth for Phase 10. It implements `docs/USER
 | 10.5 | `STEP_10_5_screens.md`: Today dashboard, Diary, Snap, new Result screen, navigation | US-2.1, US-3.x, US-4.x, US-5.x |
 | 10.6 | `STEP_10_6_onboarding.md`: six-step onboarding, profile in Settings, Edit profile | US-1.1 to US-1.7 |
 | 10.7 | `STEP_10_7_verify_and_device.md`: compliance checks, install, test with the user, docs, final commit | all |
+| 10.8 | `STEP_10_8_device_fixes.md`: fixes found on the phone (cut-off "Prefer not to say", orange progress tracks) | US-1.2, US-4.1, US-4.2 |
 
 ## RULES (same as Phase 9, restated)
 
