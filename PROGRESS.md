@@ -115,7 +115,7 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 
 ## Phase 8: Health Connect
 
-- 8.0 Preflight: DONE - working tree clean except the new build prompt, last commit cbc0e5a, :core:test and :app:assembleDebug exit 0.
+- 8.0 Preflight: DONE - working tree clean except the new build prompt, last commit fc82479, :core:test and :app:assembleDebug exit 0.
 - 8.1 Raise minSdk to 34: DONE - minSdk = 34, appVersion() uses PackageInfoFlags only, unused android.os.Build import removed, :app:assembleDebug exit 0.
 - 8.2 Manifest: DONE - 5 android.permission.health entries, PrivacyPolicyActivity plus ViewPermissionUsageActivity alias (VIEW_PERMISSION_USAGE / HEALTH_PERMISSIONS / START_VIEW_PERMISSION_USAGE); no other permission added.
 - 8.6 Privacy policy screen: DONE - activity_privacy_policy.xml and PrivacyPolicyActivity added, privacy_title and privacy_policy_text strings added; :app:assembleDebug exit 0.
@@ -130,7 +130,7 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 
 ## Phase 9: Food logging
 
-- 9.0 Preflight: DONE - only the new build prompt untracked, last commit bba18cd, :core:test and :app:assembleDebug exit 0.
+- 9.0 Preflight: DONE - only the new build prompt untracked, last commit 5ab202f, :core:test and :app:assembleDebug exit 0.
 - 9.1 Nutrition table and parser: DONE - assets/foods.txt (74 rows), FoodItem, FoodCatalog, FoodCatalogTest 5/5 (incl. shipped table validation).
 - 9.2 Matching and meal math: DONE - FoodMatcher, Meals, FoodMatcherTest 7/7, MealsTest 3/3; 13 core test classes; core android-free.
 - 9.3 Health Connect write/delete and food loader: DONE - FoodRepository, HealthConnectRepository.insertMeal/deleteMeal/mealType; compileDebugJavaWithJavac exit 0.
@@ -148,12 +148,12 @@ Requested during the on-device test: the first identification on the Pixel 8 was
 - 10.4 Theme: DONE - brand green/orange palette with values-night variants, kcal_ok/kcal_over/steps_bar colors; :app:assembleDebug exit 0.
 - 10.5 Screens: DONE - Today dashboard (greeting, goal, calorie ring, burned, steps bar, today's meals, Snap meal), Diary (7 days by day), MealAdapter + MealDelete (own meals only), Snap restyle, meal-first Result (dish, cuisine chip, kcal card, no-food card, logged card, feedback saved once on log), nav start todayFragment, tabs Today/Diary/Settings; old Accept/Correct resources removed; :core:test, :app:assembleDebug pass, lint 0 errors (22 warnings, all older).
 - 10.6 Onboarding: DONE - OnboardingActivity with six steps (name; age, sex, US/metric height and weight, activity; goal and reasons; cuisines; diet with exclusive No restrictions and eat-more; plan with suggested budget and step goal, editable, Use suggested, optional Health Connect connect), first-launch redirect in MainActivity, profile_saved event, Settings profile summary with Edit profile and Identification history; :core:test, :app:assembleDebug pass, lint 0 errors (22 warnings, none new).
-- 10.7 Verify: DONE (device walk-through pending) - privacy text and manifest comment updated for meal writing and the profile; README sections 1, 2, 5, 7 to 12 updated and section 13 (onboarding, screens, learning by logging) added; .toolchain/phase10_checks.sh 17 checks pass (no Kotlin, no new deps or native change since 22cfb7e, 300 rows, 5 health permissions, DB version 1, onboarding not exported, no name in profile_saved); :core:test, :app:assembleDebug pass, lint 0 errors.
+- 10.7 Verify: DONE (device walk-through pending) - privacy text and manifest comment updated for meal writing and the profile; README sections 1, 2, 5, 7 to 12 updated and section 13 (onboarding, screens, learning by logging) added; .toolchain/phase10_checks.sh 17 checks pass (no Kotlin, no new deps or native change since f59e2b6, 300 rows, 5 health permissions, DB version 1, onboarding not exported, no name in profile_saved); :core:test, :app:assembleDebug pass, lint 0 errors.
 - 10.8 Device fixes: DONE - onboarding verified on the Pixel 8 (six steps render, empty answers reach the 2,000 kcal / 8,000 steps default plan, No restrictions exclusive both ways, 178 cm converts to 5 ft 10 in, answers survive rotation, age 5 rejected); fixed the cut-off "Prefer not to say" label (weight 1.5, 8dp padding) and the orange progress tracks (colorSurfaceVariant on the onboarding bar, Today ring, steps bar); lint 0 errors.
 
 ## Phase 11: Coach tips
 
-- 11.0 Specs: DONE - docs/phase11/ step files and USER_STORIES E8/E9 committed before execution (6e8a81a); replayed on the working tree with 0 mismatches.
+- 11.0 Specs: DONE - docs/phase11/ step files and USER_STORIES E8/E9 committed before execution (fbe7e08); replayed on the working tree with 0 mismatches.
 - 11.1 Food tags: DONE - food_tags.txt for all 300 foods (same ids and order), FoodTag, FoodTags parser, DietRules; FoodTagsTest and DietRulesTest pass (19 core classes).
 - 11.2 Coach core: DONE - WalkMath (ACSM 3.5 MET, 100 steps/min, 70 kg default), Tip, Coach.forMeal (up to 3 tips) and Coach.forDay (1 tip); WalkMathTest and CoachTest (incl. the 3,200 of 10,000 steps, 450 kcal scenario) pass, 21 core classes, 108 tests.
 - 11.3 App coach: DONE - Coach card on the result screen (reads today once per photo, Dismiss), Coach line on Today (Hide for today), Coach tips switch in Settings, TipFormat sentences, nudge_shown / nudge_dismissed events, meal_logged.coach_tips; :app:assembleDebug and :app:lintDebug pass, 0 errors, 22 warnings (none new).

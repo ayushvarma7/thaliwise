@@ -211,7 +211,7 @@ echo "## 8 no TODO (must be empty)"; grep -rn "TODO\|FIXME\|implement later\|not
 echo "## 9 food table rows (must print 300)"; grep -vc "^#" app/src/main/assets/foods.txt
 echo "## 10 health permissions (must print 5)"; grep -c "android.permission.health" app/src/main/AndroidManifest.xml
 echo "## 11 database version unchanged (must print version = 1)"; grep -o "version = [0-9]*" app/src/main/java/com/example/identify/data/AppDatabase.java
-echo "## 12 no build, dependency, native, or llama.cpp change since Phase 9 (must be empty)"; git diff --stat 22cfb7e -- build.gradle.kts settings.gradle.kts app/build.gradle.kts core/build.gradle.kts gradle app/src/main/cpp third_party
+echo "## 12 no build, dependency, native, or llama.cpp change since Phase 9 (must be empty)"; git diff --stat f59e2b6 -- build.gradle.kts settings.gradle.kts app/build.gradle.kts core/build.gradle.kts gradle app/src/main/cpp third_party
 echo "## 13 onboarding not exported (must print android:exported=\"false\")"; grep -A2 'name=".OnboardingActivity"' app/src/main/AndroidManifest.xml | grep -o 'android:exported="false"'
 echo "## 14 profile_saved never logs the name (must be empty)"; grep -n 'put(e, "name"' app/src/main/java/com/example/identify/OnboardingActivity.java
 echo "## 15 deletes only this app's meals (must print 1)"; grep -c "if (!meal.mine)" app/src/main/java/com/example/identify/ui/MealDelete.java

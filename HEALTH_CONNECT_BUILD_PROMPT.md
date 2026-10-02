@@ -37,7 +37,7 @@ Goal of this phase, and nothing more: the app connects to Android Health Connect
 
 ## 1. FACTS ABOUT THE CURRENT STATE (already verified, do not re-derive)
 
-- Last commit: `cbc0e5a Record first on-device timings; fix battery energy on external power; enable llama perf timers`.
+- Last commit: `fc82479 Record first on-device timings; fix battery energy on external power; enable llama perf timers`.
 - App id and base package: `com.example.identify`. Modules: `:app` (Android) and `:core` (plain Java, unit-tested, no `android.*` imports).
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 31` (this phase changes minSdk to 34).
 - Existing helpers you will use:

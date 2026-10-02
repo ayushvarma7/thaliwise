@@ -31,7 +31,7 @@ This folder is the single source of truth for Phase 10. It implements `docs/USER
 
 ## FACTS (verified)
 
-- Last commit before Phase 10: `22cfb7e Add product doc: personas, user profiling, user stories, UI storyboard`.
+- Last commit before Phase 10: `f59e2b6 Add product doc: personas, user profiling, user stories, UI storyboard`.
 - minSdk 34, compileSdk 35. Pixel 8 test phone (serial `48071VDJH00284`), all 5 Health Connect permissions granted; the user cleared app history and the experiment log before this phase.
 - Real model answers seen on the phone with the old object prompt: "mouse", "Chicken", "Pita bread" (single words, low confidence). Pita had no table row.
 - Health Connect read API: `new ReadRecordsRequestUsingFilters.Builder<>(NutritionRecord.class).setTimeRangeFilter(filter).setPageSize(int).build()`, `HealthConnectManager.readRecords(request, executor, OutcomeReceiver<ReadRecordsResponse<NutritionRecord>, HealthConnectException>)`, `NutritionRecord.getStartTime()`, `getMealName()`, `getMealType()`, `getEnergy()`, `getMetadata().getId()`, `getMetadata().getDataOrigin().getPackageName()`.

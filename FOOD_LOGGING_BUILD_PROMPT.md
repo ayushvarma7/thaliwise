@@ -38,7 +38,7 @@ The AI model only names the food. It never invents calorie numbers; calories alw
 
 ## 1. FACTS ABOUT THE CURRENT STATE (verified, do not re-derive)
 
-- Last commit before this phase: `bba18cd Phase 8: Health Connect connection (docs and wrap-up)`.
+- Last commit before this phase: `5ab202f Phase 8: Health Connect connection (docs and wrap-up)`.
 - `minSdk = 34`, `compileSdk = 35`, `targetSdk = 35`. Test phone: Pixel 8, Android 17, serial `48071VDJH00284`. All 5 Health Connect permissions, including `WRITE_NUTRITION`, are already granted to the app on that phone.
 - Existing classes used here: `com.example.identify.core.DailyHealth`, `com.example.identify.health.HealthConnectRepository` (has `PERMISSIONS`, `isAvailable`, `isGranted`, `readToday`, `manager`), `com.example.identify.util.ExperimentLog` (`event`, `put`, `append`), `com.example.identify.AppPrefs` (`getStepGoal`), `com.example.identify.ui.ResultViewModel.IdentifyResult` (fields `label`, `runId`).
 - Health Connect write API (checked against `.toolchain/android-sdk/platforms/android-35/android.jar`):
@@ -89,7 +89,7 @@ git status --short
 git log --oneline | head -n 1
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" GRADLE_USER_HOME="/Users/ayush/Downloads/CLAUDE/IdentifyVLM/.toolchain/gradle-home" ./gradlew :core:test :app:assembleDebug --console=plain -q
 ```
-VERIFY: status lists only `FOOD_LOGGING_BUILD_PROMPT.md` (untracked); last commit is `bba18cd`; build exits 0. Add the heading `## Phase 9: Food logging` and the 9.0 line to `PROGRESS.md`, then commit this document and `PROGRESS.md` together.
+VERIFY: status lists only `FOOD_LOGGING_BUILD_PROMPT.md` (untracked); last commit is `5ab202f`; build exits 0. Add the heading `## Phase 9: Food logging` and the 9.0 line to `PROGRESS.md`, then commit this document and `PROGRESS.md` together.
 
 ---
 

@@ -54,7 +54,7 @@ echo "## 9 food table rows (must print 300)"; grep -vc "^#" app/src/main/assets/
 echo "## 10 food tag rows (must print 300)"; grep -vc "^#" app/src/main/assets/food_tags.txt
 echo "## 11 health permissions (must print 5)"; grep -c "android.permission.health" app/src/main/AndroidManifest.xml
 echo "## 12 database version unchanged (must print version = 1)"; grep -o "version = [0-9]*" app/src/main/java/com/example/identify/data/AppDatabase.java
-echo "## 13 no build, dependency, native, or llama.cpp change in Phase 11 (must be empty)"; git diff --stat b610e8f -- build.gradle.kts settings.gradle.kts app/build.gradle.kts core/build.gradle.kts gradle app/src/main/cpp third_party
+echo "## 13 no build, dependency, native, or llama.cpp change in Phase 11 (must be empty)"; git diff --stat ef3c844 -- build.gradle.kts settings.gradle.kts app/build.gradle.kts core/build.gradle.kts gradle app/src/main/cpp third_party
 echo "## 14 no shaming words in coach strings (must be empty)"; grep -E 'name="(tip|coach)_' app/src/main/res/values/strings.xml | grep -iwE "bad|guilt|guilty|cheat|cheating|junk|unhealthy|should|must|don.t"
 echo "## 15 diet tips say usually (must print 1)"; grep -c 'name="tip_diet_conflict">Usually contains' app/src/main/res/values/strings.xml
 echo "## 16 every tip kind has its own sentence (must be empty)"
