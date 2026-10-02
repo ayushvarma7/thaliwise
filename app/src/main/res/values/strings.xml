@@ -71,7 +71,7 @@
     <string name="performance_title">Performance</string>
     <string name="threads_label">CPU threads: %1$d</string>
     <string name="image_tokens_label">Vision tokens per image: %1$d (fewer is faster, less detail)</string>
-    <string name="performance_note">Changes take effect on the next identification. The model reloads once.</string>
+    <string name="performance_note">Changes take effect on the next identification. The model reloads once. Threads stop at this phone\'s fast cores; more would run on the slow cores and make answers several times slower.</string>
     <string name="telemetry_title">Telemetry</string>
     <string name="live_telemetry_format">CPU now: %1$.1f cores (%2$.0f%% of %3$d)\nApp memory: %4$d MB (peak %5$d MB)\nBattery: %6$s\nThermal: %7$s\nLoaded model: %8$s</string>
     <string name="live_battery_charging">%1$.1f °C, plugged in</string>

@@ -8,9 +8,11 @@ public final class PromptBuilder {
     public static final String SYSTEM_BASE =
             "You identify the food or drink in a photo. Name the specific dish the way people order it, for example chicken tikka masala, carne asada tacos, pad thai, pepperoni pizza, or a menu item such as a Big Mac.\n"
           + "If several foods are shown, name the main one. If there is no food or drink, use the label Not food.\n"
+          + "For packaged food or drinks, use the product name on the package, for example Doritos Nacho Cheese or Diet Coke.\n"
+          + "The label is only the dish or product name, at most 6 words. The cuisine is one or two words, for example Indian, Mexican, Chinese, Japanese, Italian, American, or Snacks.\n"
           + "Reply in exactly three lines and nothing else:\n"
-          + "Label: <dish name, at most 6 words>\n"
-          + "Cuisine: <one cuisine, for example Indian, Mexican, Chinese, Japanese, Italian, American>\n"
+          + "Label: <dish name>\n"
+          + "Cuisine: <cuisine>\n"
           + "Description: <one sentence>";
 
     public static final String CORRECTIONS_HEADER =

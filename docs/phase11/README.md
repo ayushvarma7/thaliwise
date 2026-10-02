@@ -10,6 +10,7 @@ Execute the step files in order. Each lists its goal, the exact file operations,
 | 11.2 | `STEP_11_2_coach_core.md`: `WalkMath`, `Tip`, `Coach` (meal and day rules), tests including the Ayush scenario | US-8.1 to US-8.5 |
 | 11.3 | `STEP_11_3_app_coach.md`: tip sentences, Coach card on the result screen, Today line, Settings switch, `nudge_shown` / `nudge_dismissed` events | US-8.1 to US-8.6 |
 | 11.4 | `STEP_11_4_verify_and_device.md`: README section 14, compliance checks, ASK BEFORE INSTALLING, walk-through with the user | all |
+| 11.5 | `STEP_11_5_device_fixes.md`: label cleaning (copied prompt words, free text), product names in the prompt, 20 packaged snacks, threads limited to fast cores | US-2.2, US-2.3, US-3.1 |
 
 ## What the coach does (summary)
 

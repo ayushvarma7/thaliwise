@@ -81,4 +81,17 @@ public class TelemetryStatsTest {
         assertEquals("unknown", c.get(1).name);
         assertEquals(Arrays.asList(1), c.get(1).cpus);
     }
+
+    @Test
+    public void fastCoresSkipTheSlowestCluster() {
+        // Pixel 8 maximum clocks: 4 little, 4 mid, 1 big
+        long[] pixel8 = {1704000, 1704000, 1704000, 1704000, 2367000, 2367000, 2367000, 2367000, 2914000};
+        assertEquals(5, TelemetryStats.fastCoreCount(TelemetryStats.clusters(pixel8)));
+        assertEquals(4, TelemetryStats.fastCoreCount(TelemetryStats.clusters(
+                new long[]{1000, 1000, 1000, 1000, 2000, 2000, 2000, 2000})));
+        assertEquals(8, TelemetryStats.fastCoreCount(TelemetryStats.clusters(
+                new long[]{2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000})));
+        assertEquals(2, TelemetryStats.fastCoreCount(TelemetryStats.clusters(new long[]{0, 0})));
+        assertEquals(1, TelemetryStats.fastCoreCount(TelemetryStats.clusters(new long[0])));
+    }
 }

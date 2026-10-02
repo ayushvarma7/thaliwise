@@ -1,6 +1,7 @@
 package com.example.identify.learning;
 
 import com.example.identify.Config;
+import com.example.identify.core.AnswerParser;
 import com.example.identify.core.EmbeddingCodec;
 import com.example.identify.data.CorrectionEntity;
 
@@ -67,7 +68,8 @@ public final class EmbeddingCache {
             return null;
         }
         if (e.embedding.length != e.embeddingDim * 4) return null;
-        return new Entry(e.id, EmbeddingCodec.fromBytes(e.embedding), e.predictedLabel, e.finalLabel,
-                e.userCorrection, e.accepted, e.timestampMillis);
+        // Labels saved before step 11.5 can hold copied prompt words (", at most 6 words"); clean them here.
+        return new Entry(e.id, EmbeddingCodec.fromBytes(e.embedding), AnswerParser.cleanLabel(e.predictedLabel),
+                AnswerParser.cleanLabel(e.finalLabel), e.userCorrection, e.accepted, e.timestampMillis);
     }
 }

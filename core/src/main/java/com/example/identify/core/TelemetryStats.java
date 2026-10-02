@@ -168,6 +168,26 @@ public final class TelemetryStats {
         return out;
     }
 
+    /**
+     * CPUs outside the slowest cluster: the cores worth giving model threads to (5 on a Pixel 8: 4 mid and
+     * 1 big). More threads put work on the little cores and made text generation several times slower.
+     * With fewer than two known clusters every CPU counts. At least 1. Clusters are sorted slowest first.
+     */
+    public static int fastCoreCount(List<Cluster> clusters) {
+        int all = 0;
+        int known = 0;
+        int slowest = 0;
+        for (Cluster c : clusters) {
+            all += c.cpus.size();
+            if (c.maxKhz > 0) {
+                if (known == 0) slowest = c.cpus.size();
+                known++;
+            }
+        }
+        if (known < 2) return Math.max(1, all);
+        return Math.max(1, all - slowest);
+    }
+
     /** Index of the cluster that contains the CPU, or -1. */
     public static int clusterOf(List<Cluster> clusters, int cpu) {
         for (int i = 0; i < clusters.size(); i++) {

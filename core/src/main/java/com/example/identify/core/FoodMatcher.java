@@ -22,7 +22,9 @@ public final class FoodMatcher {
     private static final Set<String> STOPWORDS = new HashSet<>(Arrays.asList(
             "a", "an", "the", "of", "with", "and", "on", "in", "some", "my", "fresh", "homemade",
             "food", "meal", "dish", "plate", "bowl", "slice", "piece", "serving", "cup", "glass",
-            "side", "one", "two", "small", "medium", "large"));
+            "side", "one", "two", "small", "medium", "large",
+            // words of free-text answers such as "The food in this photo is ..."
+            "photo", "image", "picture", "this", "that", "is", "are", "it"));
 
     public static final class Match {
         public final FoodItem item;
@@ -109,7 +111,8 @@ public final class FoodMatcher {
         if (t.isEmpty()) return out;
         for (String w : t.split(" ")) {
             String s = stem(w);
-            if (!STOPWORDS.contains(s)) out.add(s);
+            // The raw word is checked too: the plural-s stem turns "this" into "thi".
+            if (!STOPWORDS.contains(w) && !STOPWORDS.contains(s)) out.add(s);
         }
         return out;
     }

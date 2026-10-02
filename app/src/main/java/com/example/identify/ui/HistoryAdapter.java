@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.identify.Config;
 import com.example.identify.R;
+import com.example.identify.core.AnswerParser;
 import com.example.identify.data.CorrectionEntity;
 import com.example.identify.databinding.ItemHistoryBinding;
 
@@ -61,10 +62,11 @@ public class HistoryAdapter extends ListAdapter<CorrectionEntity, HistoryAdapter
         CorrectionEntity e = getItem(position);
         Context ctx = holder.itemView.getContext();
         Glide.with(holder.itemView).load(new File(e.imagePath)).centerCrop().into(holder.b.thumb);
-        holder.b.itemLabel.setText(e.finalLabel);
+        holder.b.itemLabel.setText(AnswerParser.cleanLabel(e.finalLabel));
         holder.b.itemDetail.setText(e.accepted
-                ? ctx.getString(R.string.history_accepted, e.predictedLabel)
-                : ctx.getString(R.string.history_corrected, e.predictedLabel, e.userCorrection));
+                ? ctx.getString(R.string.history_accepted, AnswerParser.cleanLabel(e.predictedLabel))
+                : ctx.getString(R.string.history_corrected, AnswerParser.cleanLabel(e.predictedLabel),
+                        e.userCorrection));
         String time = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(new Date(e.timestampMillis));
         if (e.latencyMs > 0) {

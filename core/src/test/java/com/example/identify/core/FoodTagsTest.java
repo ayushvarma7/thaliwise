@@ -59,7 +59,7 @@ public class FoodTagsTest {
         List<String> foodIds = new ArrayList<>();
         for (FoodItem f : FoodCatalogTest.shipped()) foodIds.add(f.id);
         List<String> tagIds = new ArrayList<>(shipped().keySet());
-        assertEquals(300, tagIds.size());
+        assertEquals(320, tagIds.size());
         assertEquals(foodIds, tagIds);
     }
 

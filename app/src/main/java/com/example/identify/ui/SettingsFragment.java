@@ -112,6 +112,8 @@ public class SettingsFragment extends Fragment {
         binding.thresholdSlider.addOnSliderTouchListener(logOnRelease("knn_threshold", 0.01f));
 
         int threads = prefs.getThreads();
+        // The slider needs valueTo above valueFrom, so it keeps at least 2 even on a one-fast-core phone.
+        binding.threadsSlider.setValueTo(Math.max(Config.MIN_THREADS + 1, AppPrefs.maxThreads()));
         binding.threadsSlider.setValue(threads);
         binding.threadsLabel.setText(getString(R.string.threads_label, threads));
         binding.threadsSlider.addOnChangeListener((slider, value, fromUser) -> {

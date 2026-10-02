@@ -310,3 +310,24 @@ arepa;dairy
 pupusas;dairy
 ceviche;fish
 injera_wat;meat|egg|dairy
+# Packaged snacks (same order as foods.txt). Snickers contains egg whites; Pringles contain wheat starch.
+mms_milk_chocolate;dairy|sweet
+mms_peanut;dairy|sweet
+mms_peanut_butter;dairy|sweet
+snickers;egg|dairy|sweet
+reeses_cups;dairy|sweet
+kit_kat;dairy|gluten|sweet
+twix;dairy|gluten|sweet
+hersheys_bar;dairy|sweet
+skittles;sweet
+doritos_nacho;dairy|fried
+lays_classic;fried
+cheetos_crunchy;dairy|fried
+pringles_original;gluten|fried
+oreo;gluten|sweet
+goldfish;dairy|gluten
+cheez_it;dairy|gluten
+clif_bar;gluten|sweet
+kind_bar;-
+nature_valley_crunchy;gluten|sweet
+protein_bar;dairy

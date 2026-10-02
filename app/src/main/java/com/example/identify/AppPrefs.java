@@ -4,7 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.example.identify.core.ProfileMath;
+import com.example.identify.core.TelemetryStats;
 import com.example.identify.core.UserProfile;
+import com.example.identify.util.Telemetry;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -73,9 +75,21 @@ public final class AppPrefs {
 
     public void setMmprojDownloadId(long id) { prefs.edit().putLong(KEY_DL_MMPROJ_ID, id).apply(); }
 
-    /** CPU threads for the model. A change reloads the model on the next identification. */
+    /**
+     * CPU threads for the model, at most maxThreads(). A change reloads the model on the next
+     * identification. A value saved before the limit existed is clamped here.
+     */
     public int getThreads() {
-        return clamp(prefs.getInt(KEY_N_THREADS, Config.N_THREADS), Config.MIN_THREADS, Config.MAX_THREADS);
+        return clamp(prefs.getInt(KEY_N_THREADS, Config.N_THREADS), Config.MIN_THREADS, maxThreads());
+    }
+
+    /**
+     * One thread per core outside the slowest cluster (5 on a Pixel 8). In testing on a Pixel 8, threads
+     * beyond the fast cores made text generation several times slower.
+     */
+    public static int maxThreads() {
+        int fast = TelemetryStats.fastCoreCount(Telemetry.clusters());
+        return Math.max(Config.MIN_THREADS, Math.min(Config.MAX_THREADS, fast));
     }
 
     public void setThreads(int threads) { prefs.edit().putInt(KEY_N_THREADS, threads).apply(); }
