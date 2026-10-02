@@ -26,7 +26,7 @@ The AI model only names the food. It never invents calorie numbers; calories alw
 10. adb is `/Users/ayush/Library/Android/sdk/platform-tools/adb`. Use the full path. Use `adb install -r` only; never uninstall (that deletes the downloaded model and the experiment log).
 11. After each step's VERIFY passes, append one line to `PROGRESS.md` under `## Phase 9: Food logging` (format `- 9.N <name>: DONE - <verify result>`) and commit (Rule 13). On a failure: read the whole error, fix the cause, rerun, at most 5 attempts per error, then write `BLOCKERS.md` and STOP.
 12. How to apply this document: every `CREATE \`path\`` is followed by one fenced block that is the complete file. Every `EDIT \`path\`` is followed by a `Find:` block and a `Replace with:` block; the Find text must occur exactly once in the file before the edit. Blocks are applied in the order written.
-13. Commit after every step with a descriptive multi-paragraph message: a subject line, then what changed per file and why, then how it was verified, then the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never `git push`.
+13. Commit after every step with a descriptive multi-paragraph message: a subject line, then what changed per file and why, then how it was verified. No co-author or tool-attribution trailers. Never `git push`.
 
 ### 0.1 STOP conditions
 

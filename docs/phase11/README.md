@@ -33,7 +33,7 @@ Execute the step files in order. Each lists its goal, the exact file operations,
    cd /Users/ayush/Downloads/CLAUDE/IdentifyVLM
    JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" GRADLE_USER_HOME="/Users/ayush/Downloads/CLAUDE/IdentifyVLM/.toolchain/gradle-home" ./gradlew <tasks>
    ```
-9. After each step's VERIFY passes, append `- 11.N <name>: DONE - <result>` under a `## Phase 11: Coach tips` heading in `PROGRESS.md` (create the heading once), then commit with a descriptive multi-paragraph message (subject; what changed per file and why; how verified; trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`). Never push.
+9. After each step's VERIFY passes, append `- 11.N <name>: DONE - <result>` under a `## Phase 11: Coach tips` heading in `PROGRESS.md` (create the heading once), then commit with a descriptive multi-paragraph message (subject; what changed per file and why; how verified; no co-author or tool-attribution trailers). Never push.
 10. On failure: read the whole error, fix, rerun, at most 5 attempts per error, then write `BLOCKERS.md` and stop.
 
 ## FACTS (verified when this spec was written)
