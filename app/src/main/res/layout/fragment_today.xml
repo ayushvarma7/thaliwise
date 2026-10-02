@@ -94,6 +94,7 @@
                             android:layout_gravity="center"
                             android:indeterminate="false"
                             app:indicatorSize="136dp"
+                            app:trackColor="?attr/colorSurfaceVariant"
                             app:trackCornerRadius="6dp"
                             app:trackThickness="12dp" />
 
@@ -192,6 +193,7 @@
                         android:layout_marginTop="8dp"
                         android:indeterminate="false"
                         app:indicatorColor="@color/steps_bar"
+                        app:trackColor="?attr/colorSurfaceVariant"
                         app:trackCornerRadius="5dp"
                         app:trackThickness="10dp" />
 

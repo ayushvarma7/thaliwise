@@ -15,6 +15,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:indeterminate="false"
+        app:trackColor="?attr/colorSurfaceVariant"
         app:trackCornerRadius="4dp"
         app:trackThickness="8dp" />
 
@@ -154,6 +155,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
                         android:saveEnabled="false"
                         android:text="@string/sex_female" />
 
@@ -163,6 +166,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
                         android:saveEnabled="false"
                         android:text="@string/sex_male" />
 
@@ -171,7 +176,9 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="1.5"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
                         android:saveEnabled="false"
                         android:text="@string/sex_unspecified" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
