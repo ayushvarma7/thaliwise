@@ -8,6 +8,8 @@ The app is written in pure Java (with a small C++ JNI bridge) and adapts to one 
 
 The project was called IdentifyVLM until 2026-10-02. The Android package id stays `com.example.identify`, so an installed copy updates in place and keeps its model files, profile, and history, and the original local checkout folder is still named `IdentifyVLM`.
 
+More detail: [`docs/MODELS.md`](docs/MODELS.md) (the on-device model, how it is used, and options to use models better) and [`docs/HEALTH_CONNECT.md`](docs/HEALTH_CONNECT.md) (what ThaliWise reads and writes today, all 40 Health Connect record types, and ranked ideas).
+
 ## 2. Requirements
 
 - macOS (built on Apple Silicon, macOS 26)
