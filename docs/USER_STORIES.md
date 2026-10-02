@@ -97,10 +97,29 @@ Format: As a ..., I want ..., so that .... Acceptance criteria (AC) are testable
 - **US-7.1** As the developer, I want every run, profile save, and meal logged as JSON lines, so that I can tune the threshold, portions, and prompts later.
   AC: `run`, `feedback`, `meal_logged`, `meal_undone`, `profile_saved` events in the experiment log.
 
-### E8. Later (not in Phase 10)
+### E8. Coach (Phase 11, spec in `docs/phase11/`)
 
-- **US-8.1** Nudges: "Ayush, you are at 3,200 of 10,000 steps and this double cheeseburger is about 450 kcal. A 25 minute walk would burn about 150 kcal."
-- **US-8.2** Diet warnings: a vegetarian user is warned when a dish contains meat.
+Tips inform and never block or delay logging. They state facts and options, never shame (Maya stops using apps with guilt-heavy messages), and diet tips say "usually", because the table describes typical recipes.
+
+- **US-8.1** As a user who has not reached the step goal, I want a walk suggestion when I am about to log a big meal, so that I can balance it.
+  AC: before logging a meal of at least 400 kcal (or one that goes over budget) while steps are below the goal, the result screen shows "Ayush, you are at 3,200 of 10,000 steps and this meal is about 450 kcal. A 30 minute walk (about 3,000 steps) burns about 141 kcal." Walk numbers use 3.5 MET at 100 steps a minute and the profile weight (70 kg if not given); the walk is 10 to 30 minutes.
+- **US-8.2** As a user with a diet, I want a warning when a dish usually contains something my diet avoids, so that I notice before I eat or log it.
+  AC: a vegetarian snapping a beef dish sees "Usually contains meat, and your profile says Vegetarian." as the first tip; Vegan, Pescatarian, Halal (pork, alcohol), Kosher (pork, shellfish), Gluten-free, and Dairy-free work the same way; the tags for all 300 foods are in `food_tags.txt`.
+- **US-8.3** As a user, I want to know when a meal takes me over my budget, so that I can choose the portion.
+  AC: when eaten today plus this meal is above the budget, a tip says by how much.
+- **US-8.4** As a user who picked "eat more of" goals, I want feedback that matches them, so that the app supports what I asked for.
+  AC: more protein (at least 25 g: "Good for your protein goal"), more vegetables, fewer fried foods, less sugar, and smaller portions (a half portion for meals of 700 kcal or more) each have a tip; at most 3 tips per meal, diet warnings first.
+- **US-8.5** As a user, I want one line on Today about how the day is going, so that I know the next useful step.
+  AC: one of over budget (with a walk suggestion), step goal reached, steps left after 5 PM, or kcal left; "Hide for today" hides it until tomorrow.
+- **US-8.6** As a user, I want to turn the tips off and dismiss them, so that the app never nags.
+  AC: a "Coach tips" switch in Settings (on by default); Dismiss on the result card; `nudge_shown` and `nudge_dismissed` events in the experiment log.
+
+### E9. Later (not in Phase 11)
+
+- **US-9.1** Reminders outside the app (an evening notification about steps left); needs the notification permission.
+- **US-9.2** Protein and other macro totals on Today, with a protein goal for "Build muscle".
+- **US-9.3** Meal ideas from favorite cuisines and the diet, and weekly trends in the Diary.
+- **US-9.4** Kosher meat-with-dairy checks and per-restaurant ingredient data.
 
 ## 5. UI storyboard
 
