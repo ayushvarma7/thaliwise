@@ -1,19 +1,29 @@
 package com.example.identify.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class FewShotSelector {
     private FewShotSelector() {}
+
+    /**
+     * Model labels that name no dish. A correction after one of these would read "You said Unknown food.
+     * Correct answer: X" and teach the model to answer X whenever it is unsure, so it is never an example.
+     */
+    static final Set<String> NON_ANSWERS = new HashSet<>(Arrays.asList("unknown food", "unknown", "not food"));
 
     public static List<CorrectionExample> select(float[] query, List<CorrectionExample> pool,
                                                  int nSimilar, int maxTotal) {
         Map<String, CorrectionExample> byKey = new LinkedHashMap<>();
         for (CorrectionExample e : pool) {
             if (e == null || isBlank(e.modelLabel) || isBlank(e.correctLabel)) continue;
+            if (NON_ANSWERS.contains(norm(e.modelLabel))) continue;
             String key = norm(e.modelLabel) + "|" + norm(e.correctLabel);
             CorrectionExample prev = byKey.get(key);
             if (prev == null || e.timestampMillis > prev.timestampMillis) byKey.put(key, e);

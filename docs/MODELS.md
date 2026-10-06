@@ -48,7 +48,7 @@ Measured speed on a Pixel 8 is in README section 6.
 ### One model, used three ways
 
 1. **Embedding model.** The vision encoder runs once per photo. The projector outputs are averaged over all image tokens and normalized to length 1. That vector is the photo's key in the kNN memory (cosine similarity, default threshold 0.92). The same encoding is reused for the answer, so the encoder never runs twice.
-2. **Text generation.** The system prompt asks for the dish the way people order it, the product name for packaged food, and exactly three lines (`Label`, `Cuisine`, `Description`). Up to 5 past corrections follow ("You said X. Correct answer: Y."): the 3 most similar by embedding, then the most recent. `AnswerParser` reads the reply and cleans copied prompt words, template words, and free-text openings.
+2. **Text generation.** The system prompt asks for the dish the way people order it, the product name for packaged food, and exactly three lines (`Label`, `Cuisine`, `Description`). It names no example dishes, because a small model that cannot read a photo tends to repeat a prompt example; instead it offers the answer `Unknown food`. A grammar (`PromptBuilder.ANSWER_GRAMMAR`, applied by llama.cpp's grammar sampler) forces the three lines during generation, so free text and missing lines cannot happen. Up to 5 past corrections follow ("You said X. Correct answer: Y."): the 3 most similar by embedding, then the most recent. `AnswerParser` reads the reply and cleans copied prompt words, template words, and free-text openings.
 3. **Confidence signal.** For every generated token the bridge records the chosen token's probability and the 5 most likely alternatives. These go to the experiment log only (label confidence, "other label starts the model weighed") and are the raw material for any later tuning.
 
 ### What the model does not do
@@ -72,9 +72,9 @@ Measured speed on a Pixel 8 is in README section 6.
 
 ## 3. Ways to get more out of models
 
-Ordered from smallest change to largest. None of these is built yet.
+Ordered from smallest change to largest. Item 1 is built (step 11.6); the others are not built yet.
 
-1. **Grammar-constrained output.** llama.cpp can force the reply to match a grammar (`llama_sampler_init_grammar`). A three-line grammar (`Label: ...`, `Cuisine: ...`, `Description: ...`) would make format drift impossible instead of cleaning it afterward. Small change in `vlm_bridge.cpp`; no new model.
+1. **Grammar-constrained output (done).** `vlm_bridge.cpp` puts `llama_sampler_init_grammar` with `PromptBuilder.ANSWER_GRAMMAR` first in the sampler chain, so the reply is always `Label: ...`, `Cuisine: ...`, `Description: ...`. The grammar was checked with llama.cpp's grammar engine (it accepts a correct reply and rejects free text, a missing line, a label over 60 characters, and template brackets). The generation stats record `grammar` as `on`, `failed`, or `off`.
 2. **Reference photo memory.** Seed the kNN memory with labeled public photos (tooling started in `tools/refmem`: 1,580 photos of 77 table dishes from Food-101 and an Indian food set, and a Mac build of the same embedding code). Needs the two model files on the Mac and an accuracy test on held-out photos before it ships. Model weights stay unchanged.
 3. **GPU or NPU.** llama.cpp has OpenCL and Vulkan backends. The Pixel 8 GPU (Mali-G715) might speed up the vision encoder, the slowest step. Needs measurement; results vary by driver.
 4. **A smaller vision model for speed.** Liquid AI also publishes smaller LFM2-VL models. Check availability and accuracy on the same held-out photos before switching. A different model needs a new `MODEL_ID`, since embeddings from different models are not comparable.

@@ -379,7 +379,7 @@ public class ResultFragment extends Fragment {
             if (binding == null || !isAdded() || today == null) return;
             binding.todaySummaryText.setVisibility(View.VISIBLE);
             binding.todaySummaryText.setText(getString(R.string.meal_today_summary,
-                    HealthFormat.kcal(app, today.eatenKcal), HealthFormat.kcal(app, today.burnedKcal),
+                    HealthFormat.kcalWithUnit(app, today.eatenKcal), HealthFormat.kcalWithUnit(app, today.burnedKcal),
                     HealthFormat.steps(app, today.steps), HealthFormat.steps(app, goal)));
         });
     }

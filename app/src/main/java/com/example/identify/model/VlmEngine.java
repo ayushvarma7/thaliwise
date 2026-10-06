@@ -6,6 +6,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import com.example.identify.Config;
+import com.example.identify.core.PromptBuilder;
 
 import java.nio.charset.StandardCharsets;
 
@@ -83,7 +84,8 @@ public final class VlmEngine {
                 systemPrompt.getBytes(StandardCharsets.UTF_8),
                 userPrompt.getBytes(StandardCharsets.UTF_8),
                 Config.MAX_NEW_TOKENS, Config.TEMPERATURE, Config.MIN_P,
-                Config.REPEAT_PENALTY, Config.TOP_K);
+                Config.REPEAT_PENALTY, Config.TOP_K,
+                PromptBuilder.ANSWER_GRAMMAR.getBytes(StandardCharsets.UTF_8));
         lastGenerateStatsJson = stats(handle);
         return new String(out, StandardCharsets.UTF_8);
     }
@@ -123,7 +125,7 @@ public final class VlmEngine {
                                                int imageMaxTokens);
     private static native byte[] nativeGenerateWithImage(long handle, String imagePath,
             byte[] systemPromptUtf8, byte[] userPromptUtf8, int maxTokens,
-            float temperature, float minP, float repeatPenalty, int topK);
+            float temperature, float minP, float repeatPenalty, int topK, byte[] grammarUtf8);
     private static native float[] nativeGetImageEmbedding(long handle, String imagePath);
     private static native byte[] nativeGetLastStats(long handle);
     private static native void nativeUnloadModel(long handle);

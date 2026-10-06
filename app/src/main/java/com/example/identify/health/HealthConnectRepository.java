@@ -181,7 +181,9 @@ public final class HealthConnectRepository {
         }
         if (eaten) {
             aggregate(hc, range, NutritionRecord.ENERGY_TOTAL, main, (v, err) -> {
+                // Nothing logged yet today is 0 kcal eaten, not "no data": the read permission is granted.
                 if (v != null) p.eatenKcal = kcal(v);
+                else if (err == null) p.eatenKcal = 0;
                 if (err != null) p.errors.add("nutrition: " + err);
                 if (--p.left == 0) finish(app, p, t0, cb);
             });

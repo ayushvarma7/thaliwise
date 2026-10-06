@@ -30,6 +30,16 @@ final class HealthFormat {
         }
     }
 
+    /** "1,234 steps", or "no data" without a unit. */
+    static String stepsWithUnit(Context ctx, long v) {
+        return v < 0 ? ctx.getString(R.string.health_no_data) : ctx.getString(R.string.steps_with_unit, steps(ctx, v));
+    }
+
+    /** "1,234 kcal", or "no data" without a unit. */
+    static String kcalWithUnit(Context ctx, double v) {
+        return Double.isNaN(v) ? ctx.getString(R.string.health_no_data) : ctx.getString(R.string.kcal_with_unit, kcal(ctx, v));
+    }
+
     static String slot(Context ctx, Meals.Slot slot) {
         switch (slot) {
             case BREAKFAST: return ctx.getString(R.string.meal_slot_breakfast);

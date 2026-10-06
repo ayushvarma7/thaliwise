@@ -66,7 +66,7 @@ photo
   -> meal record in Health Connect
 ```
 
-The model names the food. The calories come from the nutrition table, not from the model.
+The model names the food. A grammar makes the model answer in exactly three lines: label, cuisine, and description. The calories come from the nutrition table, not from the model.
 
 The app learns in two ways. It adds your corrections to the prompt. It also keeps the embedding of each confirmed photo, so a similar photo can get its label from the memory.
 
@@ -290,13 +290,13 @@ The core tests cover the nutrition table, the food matcher, and the answer parse
 | `adb: device unauthorized` | The phone does not trust the computer. | Unlock the phone and tap Allow in the USB debugging dialog. |
 | The app stops when the model loads | The CPU does not have the i8mm instructions. | Remove the `GGML_CPU_ARM_ARCH` line from `app/src/main/cpp/CMakeLists.txt` and build again. |
 | The dish name is not correct | The model guess is not correct. | Tap Different food and log the correct food. The app keeps the correction. |
-| No cuisine label on the result | The model did not give a cuisine line. | No action is necessary. The calorie match still operates. |
+| The result shows "No food recognized" | The model answered Unknown food or Not food. | Tap Name the food, or take a new photo with more light. |
 
 ## 13. Limitations
 
 - The calories are table values for one typical serving. They are not a measurement of the food on your plate.
 - A dish that is not in the table can be logged only with the name of a food that is in the table.
-- The model sometimes does not use the requested answer format. The app cleans the answer, but the answer can have no cuisine.
+- A grammar forces the three-line answer format. The words in each line can still be wrong.
 - Diet warnings use typical recipes. Halal checks only pork and alcohol. Kosher checks only pork and shellfish.
 - The calorie budget is an estimate from the Mifflin-St Jeor formula. It is not medical advice.
 - The model operates on the CPU only.

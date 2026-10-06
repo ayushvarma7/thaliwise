@@ -97,7 +97,7 @@ public class TodayFragment extends Fragment {
         renderCalories(Double.NaN, budget);
         renderSteps(DailyHealth.UNKNOWN_STEPS, goal);
         binding.burnedText.setText(getString(R.string.today_burned,
-                HealthFormat.kcal(ctx, Double.NaN), HealthFormat.kcal(ctx, Double.NaN)));
+                HealthFormat.kcalWithUnit(ctx, Double.NaN), HealthFormat.kcalWithUnit(ctx, Double.NaN)));
         if (!connected) {
             binding.todayCoachCard.setVisibility(View.GONE);
             adapter.submitList(null);
@@ -110,7 +110,7 @@ public class TodayFragment extends Fragment {
             renderCalories(today.eatenKcal, budget);
             renderSteps(today.steps, goal);
             binding.burnedText.setText(getString(R.string.today_burned,
-                    HealthFormat.kcal(ctx, today.burnedKcal), HealthFormat.kcal(ctx, today.activeKcal)));
+                    HealthFormat.kcalWithUnit(ctx, today.burnedKcal), HealthFormat.kcalWithUnit(ctx, today.activeKcal)));
             renderDayTip(today, budget, goal);
         });
         final ZoneId zone = ZoneId.systemDefault();

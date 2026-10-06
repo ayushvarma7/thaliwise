@@ -282,8 +282,11 @@ public class SettingsFragment extends Fragment {
             }
             long goal = prefs.getStepGoal();
             String text = getString(R.string.health_today_format,
-                    formatSteps(today.steps), formatSteps(goal), formatSteps(today.stepsRemaining(goal)),
-                    formatKcal(today.burnedKcal), formatKcal(today.activeKcal), formatKcal(today.eatenKcal));
+                    HealthFormat.stepsWithUnit(requireContext(), today.steps), formatSteps(goal),
+                    HealthFormat.stepsWithUnit(requireContext(), today.stepsRemaining(goal)),
+                    HealthFormat.kcalWithUnit(requireContext(), today.burnedKcal),
+                    HealthFormat.kcalWithUnit(requireContext(), today.activeKcal),
+                    HealthFormat.kcalWithUnit(requireContext(), today.eatenKcal));
             if (error != null) text = text + "\n" + getString(R.string.health_read_failed, error);
             binding.healthTodayText.setText(text);
         });

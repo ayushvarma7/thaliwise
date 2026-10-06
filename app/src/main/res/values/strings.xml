@@ -90,7 +90,9 @@
     <string name="health_connected">Connected.</string>
     <string name="health_loading">Reading today from Health Connect</string>
     <string name="health_no_data">no data</string>
-    <string name="health_today_format">Today: %1$s steps (goal %2$s, %3$s to go)\nBurned: %4$s kcal total, %5$s kcal active\nEaten (logged in Health Connect): %6$s kcal</string>
+    <string name="health_today_format">Today: %1$s (goal %2$s steps, %3$s to go)\nBurned: %4$s total, %5$s active\nEaten (logged in Health Connect): %6$s</string>
+    <string name="steps_with_unit">%1$s steps</string>
+    <string name="kcal_with_unit">%1$s kcal</string>
     <string name="health_read_failed">Could not read Health Connect: %1$s</string>
     <string name="health_denied">No access granted. Open Health Connect to allow it.</string>
     <string name="health_open_failed">Could not open Health Connect.</string>
@@ -120,7 +122,7 @@
     <string name="meal_undo">Undo</string>
     <string name="meal_undone">Meal removed from Health Connect.</string>
     <string name="meal_undo_failed">Could not remove the meal: %1$s</string>
-    <string name="meal_today_summary">Today: %1$s kcal eaten, %2$s kcal burned, %3$s of %4$s steps</string>
+    <string name="meal_today_summary">Today: %1$s eaten, %2$s burned, %3$s of %4$s steps</string>
 
     <string name="title_today">Today</string>
     <string name="title_diary">Diary</string>
@@ -133,7 +135,7 @@
     <string name="today_of_budget">of %1$s</string>
     <string name="today_remaining">%1$s kcal left</string>
     <string name="today_over">%1$s kcal over budget</string>
-    <string name="today_burned">Burned %1$s kcal (%2$s active)</string>
+    <string name="today_burned">Burned %1$s (%2$s active)</string>
     <string name="today_steps_title">Steps</string>
     <string name="today_steps">%1$s / %2$s</string>
     <string name="today_steps_to_go">%1$s steps to go</string>

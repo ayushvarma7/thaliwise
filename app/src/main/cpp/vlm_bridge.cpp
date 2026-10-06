@@ -374,13 +374,14 @@ extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_example_identify_model_VlmEngine_nativeGenerateWithImage(
         JNIEnv* env, jclass, jlong handle, jstring jImagePath,
         jbyteArray jSystem, jbyteArray jUser, jint maxTokens,
-        jfloat temperature, jfloat minP, jfloat repeatPenalty, jint topK) {
+        jfloat temperature, jfloat minP, jfloat repeatPenalty, jint topK, jbyteArray jGrammar) {
     VlmSession* s = session_or_throw(env, handle);
     if (!s) return nullptr;
     std::lock_guard<std::mutex> lock(s->mu);
     const std::string imagePath = from_jstring(env, jImagePath);
     const std::string sys       = from_utf8_bytes(env, jSystem);
     const std::string user      = from_utf8_bytes(env, jUser);
+    const std::string grammar   = from_utf8_bytes(env, jGrammar);   // empty: no grammar
     const auto t0 = Clock::now();
 
     llama_memory_clear(llama_get_memory(s->lctx), true);   // fresh conversation each call
@@ -457,8 +458,21 @@ Java_com_example_identify_model_VlmEngine_nativeGenerateWithImage(
     const double t_prefill = ms_since(t2);
     const llama_pos n_prompt = n_past;
 
-    // order: penalties -> top_k -> min_p -> temp -> dist
+    // order: grammar -> penalties -> top_k -> min_p -> temp -> dist
     llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    // The grammar comes first, so every later sampler sees only tokens that keep the reply in the
+    // three-line format. A grammar that does not parse is skipped, never fatal.
+    std::string grammar_status = "off";
+    if (!grammar.empty()) {
+        llama_sampler* g = llama_sampler_init_grammar(s->vocab, grammar.c_str(), "root");
+        if (g) {
+            llama_sampler_chain_add(smpl, g);
+            grammar_status = "on";
+        } else {
+            grammar_status = "failed";
+            LOGE("answer grammar did not parse; sampling without it");
+        }
+    }
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
             llama_vocab_n_tokens(s->vocab), kPenaltyLastN, repeatPenalty, 0.0f, 0.0f));
     llama_sampler_chain_add(smpl, llama_sampler_init_top_k(topK));
@@ -569,6 +583,7 @@ Java_com_example_identify_model_VlmEngine_nativeGenerateWithImage(
     kv_int(j, "n_gen_tokens", n_gen);
     kv_num(j, "gen_tokens_per_s", t_generate > 0.0 ? n_gen * 1000.0 / t_generate : 0.0);
     kv_str(j, "stop_reason", stop_reason);
+    kv_str(j, "grammar", grammar_status);
     kv_num(j, "t_total_ms", ms_since(t0));
     kv(j, "llama_perf", pj);
     kv(j, "tokens", tokens_json);

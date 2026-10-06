@@ -11,6 +11,7 @@ Execute the step files in order. Each lists its goal, the exact file operations,
 | 11.3 | `STEP_11_3_app_coach.md`: tip sentences, Coach card on the result screen, Today line, Settings switch, `nudge_shown` / `nudge_dismissed` events | US-8.1 to US-8.6 |
 | 11.4 | `STEP_11_4_verify_and_device.md`: README section 14, compliance checks, ASK BEFORE INSTALLING, walk-through with the user | all |
 | 11.5 | `STEP_11_5_device_fixes.md`: label cleaning (copied prompt words, free text), product names in the prompt, 20 packaged snacks, threads limited to fast cores | US-2.2, US-2.3, US-3.1 |
+| 11.6 | `STEP_11_6_answer_fixes.md`: no example dishes in the prompt, "Unknown food", grammar-forced three-line answer, no non-answer few-shot examples, eaten 0 kcal instead of "no data" | US-2.2, US-2.3, US-4.1 |
 
 ## What the coach does (summary)
 
