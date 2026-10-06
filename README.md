@@ -1,256 +1,333 @@
 # ThaliWise
 
-## 1. What this is
+Private food recognition and calorie tracking for Android. The AI model operates on the phone.
 
-ThaliWise is a private, offline food and activity companion for Android. You snap a meal; Liquid AI's LFM2.5-VL-1.6B vision language model, running on the phone through llama.cpp, names the dish and its cuisine; the app finds the calories for a typical serving in a 320-row table, lets you confirm the portion, and logs the meal into Health Connect next to the steps and calories burned that Fitbit or Google Fit record. The home screen shows calories eaten against a personal budget from a short onboarding profile, steps against a goal, and today's meals.
+| Today | Snap a meal | Result from the model | Result from memory |
+|---|---|---|---|
+| <img src="docs/screenshots/today.png" width="200" alt="Today screen with the calorie ring, steps, and the Snap meal button"> | <img src="docs/screenshots/snap.jpg" width="200" alt="Snap screen with a photo of pasta with vegetables"> | <img src="docs/screenshots/result-model.jpg" width="200" alt="Result screen: pasta dish, 220 kcal per cup cooked, identified by the model in 6.1 s"> | <img src="docs/screenshots/result-memory.jpg" width="200" alt="Result screen: pasta dish identified from memory with similarity 1.00"> |
 
-The app is written in pure Java (with a small C++ JNI bridge) and adapts to one user through a local memory of their past corrections. After a one-time model download of about 1.3 GB, it works fully offline. Personas, the profiling questions, user stories, and the UI storyboard are in `docs/USER_STORIES.md`.
+Screenshots: Pixel 8, Android 17, dark theme, 2026-10-06.
 
-The project was called IdentifyVLM until 2026-10-02. The Android package id stays `com.example.identify`, so an installed copy updates in place and keeps its model files, profile, and history, and the original local checkout folder is still named `IdentifyVLM`.
+## Contents
 
-More detail: [`docs/MODELS.md`](docs/MODELS.md) (the on-device model, how it is used, and options to use models better) and [`docs/HEALTH_CONNECT.md`](docs/HEALTH_CONNECT.md) (what ThaliWise reads and writes today, all 40 Health Connect record types, and ranked ideas).
+1. [Overview](#1-overview)
+2. [Features](#2-features)
+3. [How ThaliWise works](#3-how-thaliwise-works)
+4. [Privacy and data](#4-privacy-and-data)
+5. [Requirements](#5-requirements)
+6. [Installation](#6-installation)
+7. [Operation](#7-operation)
+8. [Settings](#8-settings)
+9. [Performance](#9-performance)
+10. [Project structure](#10-project-structure)
+11. [Tests and checks](#11-tests-and-checks)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Limitations](#13-limitations)
+14. [Documentation](#14-documentation)
+15. [Third-party components](#15-third-party-components)
+16. [License](#16-license)
 
-## 2. Requirements
+## 1. Overview
 
-- macOS (built on Apple Silicon, macOS 26)
-- Android Studio, or the Android SDK command-line tools
-- JDK 17 or newer (built with the JetBrains Runtime 21.0.8 bundled with Android Studio)
-- Android NDK 27.2.12479018 and SDK CMake 3.22.1 (the exact versions used for this build)
-- Android SDK Platform 35 and Build-Tools 35.0.0 / 34.0.0
-- A Pixel 8, or another arm64 Android 14+ device (Health Connect is built in from Android 14) whose CPU supports dotprod and i8mm (see Known limitations)
-- About 1.5 GB of free storage on the device
+ThaliWise identifies the food in a photo. It shows the calories for one serving and records the meal in Health Connect.
 
-In the original checkout, the SDK, NDK, CMake, and Gradle caches live inside the project in `.toolchain/` (ignored by git), and `local.properties` points `sdk.dir` there. A fresh clone needs its own `local.properties` with `sdk.dir=<path to your Android SDK>`; Android Studio writes this file automatically.
+The vision language model LFM2.5-VL-1.6B operates on the phone CPU. After the one-time model download, the app operates without a network connection.
 
-## 3. Clone and build
+The Today screen compares the calories that you ate with a daily budget. It also shows the calories that you burned and your steps.
 
-```bash
-git clone --recurse-submodules https://github.com/ayushvarma7/thaliwise.git
-cd thaliwise              # or: git submodule update --init --recursive
-./gradlew :core:test
-./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+The name comes from the thali, one plate with many small dishes. ThaliWise knows dishes from many cuisines and helps you balance the day.
 
-llama.cpp is pinned as a git submodule at `third_party/llama.cpp`:
+## 2. Features
 
-- tag: `b11323`
-- commit: `f11d642a27b921cf22b6a8beb1b899f960fedcde`
+| Feature | Description |
+|---|---|
+| Food identification | The model gives the dish name, the cuisine, and a short description of the photo. |
+| Nutrition table | 320 foods: dishes from 16 cuisines, US fast food, packaged snacks, fruit, and everyday food. The values are for one typical serving. |
+| Meal log | You confirm the food, the portion, and the calories. ThaliWise then writes one meal record to Health Connect. |
+| Today | A calorie ring, the calories burned, a step bar, and the meals of the day. |
+| Diary | The meals of the last 7 days, with a total for each day. |
+| Profile | Six short onboarding steps set a daily calorie budget and a step goal. |
+| Coach tips | Diet warnings, walk suggestions, and feedback on your food goals. The tips do not stop or delay a meal log. |
+| Learning | The app keeps your corrections on the phone and uses them for the next photos. The model itself does not change. |
+| Experiment log | Each identification writes time, CPU, memory, and confidence data to a local JSON Lines file. |
 
-The first build compiles llama.cpp, ggml, and libmtmd for arm64-v8a and can take several minutes on a slower machine. The native code is always built as Release, even for debug APKs, because a Debug native build makes inference many times slower.
-
-## 4. Getting the model files
-
-The model files are not part of the APK. Both come from https://huggingface.co/LiquidAI/LFM2.5-VL-1.6B-GGUF:
-
-| File | Size | Role |
-|---|---|---|
-| `LFM2.5-VL-1.6B-Q4_0.gguf` | 696 MB | language model |
-| `mmproj-LFM2.5-VL-1.6b-Q8_0.gguf` | 583 MB | vision projector (note the lowercase `b` in `1.6b`) |
-
-In the app: open Settings and tap Download model. The download uses the system download manager and stores the files in `/sdcard/Android/data/com.example.identify/files/models/`.
-
-Developer shortcut (install the app once first, so the package directory exists):
-
-```bash
-hf download LiquidAI/LFM2.5-VL-1.6B-GGUF LFM2.5-VL-1.6B-Q4_0.gguf mmproj-LFM2.5-VL-1.6b-Q8_0.gguf --local-dir .
-adb shell mkdir -p /sdcard/Android/data/com.example.identify/files/models
-adb push LFM2.5-VL-1.6B-Q4_0.gguf /sdcard/Android/data/com.example.identify/files/models/
-adb push mmproj-LFM2.5-VL-1.6b-Q8_0.gguf /sdcard/Android/data/com.example.identify/files/models/
-```
-
-## 5. Architecture
+## 3. How ThaliWise works
 
 ```
 photo
-  -> private copy (EXIF fixed, 1024 px, kept for history and later fine-tuning)
-  -> inference copy (longest side 512 px, so LFM2-VL encodes it as one tile)
-  -> vision encoder, run once per photo
-  -> mean-pooled, L2-normalized embedding
-  -> kNN over saved embeddings
-       -> (score >= threshold) memory label
-       -> (else) few-shot prompt + VLM generation that reuses the same image encoding
-          -> Label/Cuisine/Description parse
-  -> table match (FoodMatcher: label words, then the model's cuisine and the user's favorite cuisines)
-  -> user logs the meal (the guessed food counts as an accept, any other food as a correction)
-  -> Health Connect NutritionRecord + Room row + in-memory cache + experiment log
+  -> copy with a longest side of 512 px (one image tile for the model)
+  -> vision encoder, one pass
+  -> photo embedding
+       -> similar photo in the memory?  yes: label from the memory
+                                         no:  prompt with your past corrections
+                                              -> LFM2.5-VL answer: label, cuisine, description
+  -> match to the nutrition table
+  -> you confirm the food, the portion, and the calories
+  -> meal record in Health Connect
 ```
 
-Why the inference copy is 512 px: LFM2-VL splits any image larger than about 724x724 into 512x512 tiles plus a thumbnail, and each tile is a full vision encoder pass. On the Pixel 8 CPU one pass took 18 to 54 s (see section 6), so a 1024 px photo (6 tiles + thumbnail) took minutes before the first word. One 512 px tile is one pass, and that single encoding now serves both the memory lookup and the answer.
+The model names the food. The calories come from the nutrition table, not from the model.
 
-The app adapts to the user through two layers. Neither changes the model.
+The app learns in two ways. It adds your corrections to the prompt. It also keeps the embedding of each confirmed photo, so a similar photo can get its label from the memory.
 
-- **Layer 1, few-shot prompt injection.** Up to 5 past corrections are written into the system prompt as "You said X. Correct answer: Y." Up to 3 are chosen as the most similar by embedding; the rest are the most recent, with duplicates removed.
-- **Layer 2, embedding kNN cache.** Every saved photo stores its embedding and final label. When a new photo's nearest stored embedding has cosine similarity at or above the threshold (default 0.92, adjustable in Settings), the app returns that label without running text generation. "Run the model anyway" on the result screen forces a full model answer.
+For more information, see [docs/MODELS.md](docs/MODELS.md) and [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md).
 
-Module layout:
+## 4. Privacy and data
 
-- `:core`: pure Java (no Android imports). Cosine similarity, kNN search, embedding byte codec, few-shot selection, prompt building, answer parsing, history search, the food table and matcher, meals and diary grouping, and the profile math (calorie budget, step goal, units). Covered by JVM unit tests (`./gradlew :core:test`, 17 test classes).
-- `:app`: Android. Room database, the JNI bridge to llama.cpp (`app/src/main/cpp/vlm_bridge.cpp`), the model download, Health Connect, onboarding, and the UI (XML layouts, Fragments, ViewModels, LiveData).
+- ThaliWise does not send photos, meals, profile data, or health data to a server.
+- The app uses the network one time only, to download the model files from Hugging Face.
+- The photos, the corrections, the profile, and the experiment log stay in the storage of the app on the phone.
+- Health Connect access uses 5 permissions. You can remove each permission in Health Connect at any time.
 
-## 6. Performance on Pixel 8
-
-First measurement, with the original pipeline (Pixel 8, Android 17, 4 threads, phone charging over USB): a 771x1024 photo was split into a 2x3 grid of 512x512 tiles plus a thumbnail. Each tile took 17.8 to 54.4 s to encode (`image slice encoded in` lines) and 3.3 to 10.3 s to decode into the language model (`image decoded` lines). The answer had not appeared after several minutes. That run led to the single-tile, encode-once pipeline in section 5.
-
-Current pipeline, first measured run (2026-10-01, Pixel 8, Android 17, 4 threads, vision token cap 256, phone plugged in, model not yet loaded). Camera photo 4080x3072, stored as 771x1024, handed to the model as 386x512 (one tile, 192 image tokens), 82 prompt text tokens:
-
-| Step | Measured value | How measured |
-|---|---|---|
-| Model load (first identify) | 2.3 s (language model 1.3 s, projector 0.9 s) | experiment log `phases` model_load, `native_load` |
-| Image embedding | 7.3 s (vision encoder, 4.1 cores busy) | `phases` image_encode, `native_embed.t_encode_ms` |
-| Text generation | 2.05 s (prefill 1.86 s: image tokens 1.08 s, text 0.78 s; then 2 tokens in 0.18 s) | `native_generate` |
-| Total (model path) | 11.6 s including the first load, so about 9.3 s once loaded | run `total_ms` |
-| Total (memory path) | not yet measured | |
-
-CPU and memory for that run: 40.5 s of CPU time in 11.6 s, so 3.5 cores busy on average (39% of the 9 cores) and 4.5 at peak. 64% of the CPU time ran on the mid cores (Cortex-A715, about 2.24 GHz), 28% on the big core (Cortex-X3), 8% on the little cores. App memory rose from 0.2 GB to a 2.2 GB peak (1.4 GB anonymous: repacked language-model weights, the projector, buffers; 0.8 GB memory-mapped model file) and stays near 2 GB while the model is loaded, also in the background. Thermal status stayed "none". The vision encoder is 63% of the total, so the vision token cap in Settings is the main speed lever.
-
-To measure, run this while identifying photos, then read `load_ms`, `embed_ms`, `gen_ms`, and `total_ms`:
-
-```bash
-adb logcat -s Identify:I VlmBridge:I
-```
-
-The memory path still runs the vision encoder to compute the embedding. It only skips text generation, so it is faster than the model path but not instant.
-
-Every run also writes its full timing breakdown, CPU use, memory, and battery numbers to the experiment log (section 10), and the result screen shows a summary under Show details.
-
-## 7. What the app learns and what it does not
-
-- **Learns:** which labels this user prefers for things the model got wrong (through the prompt), and what this user's recurring objects look like (through stored embeddings).
-- **Does not learn:** the model weights never change. There are no gradients, no fine-tuning, and no training on the device. Clearing history in Settings removes everything the app has "learned".
-- **Why this is not reinforcement learning:** reinforcement learning updates a policy's parameters from a reward signal. Here, logging the guessed food (an accept) is not a reward used to update anything; the model is frozen. The accurate terms are personalized inference with a local correction memory, retrieval of few-shot examples, and a nearest-neighbor label cache.
-
-## 8. Known limitations
-
-- The 0.92 similarity threshold is a placeholder, not a validated value. Tune it in Settings using the `score` and `nearest` values that appear in the logcat lines.
-- Mean-pooled projector outputs are not a trained retrieval embedding. Two different objects of the same kind (for example two different golden retrievers) may match each other.
-- Text-only few-shot corrections can bias the model toward a corrected label on unrelated photos.
-- CPU only. There is no Vulkan or OpenCL backend.
-- `N_THREADS = 4` is a starting point. Settings > Performance changes the thread count (1 up to the phone's fast cores, 5 on a Pixel 8; more threads run on the little cores and make generation several times slower) and the vision token cap (64 to 256); compare runs in the experiment log.
-- The vision encoder dominates the time on the CPU. Fewer vision tokens per image encode faster but see less detail.
-- The native code is compiled for `armv8.2-a+dotprod+i8mm+fp16` (the Pixel 8 Tensor G3 supports all of these). On an older arm64 CPU without i8mm, the app can crash when the model loads. Removing the `GGML_CPU_ARM_ARCH` line in `app/src/main/cpp/CMakeLists.txt` gives a more portable but slower build.
-- Calories are table values for one typical serving, not a measurement of the plate. A dish that is not in the table can be logged only by naming a food that is.
-- Cuisine matching works on words, so a favorite or model cuisine of "Latin American" also gives "American" rows the small tie-break boost.
-- The diet and "eat more of" answers are stored and shown in Settings but do not yet change suggestions or warn about conflicts, and there are no nudges yet (planned, `docs/USER_STORIES.md` E8).
-- The calorie budget is an estimate from the Mifflin-St Jeor formula, not medical advice. "Prefer not to say" uses the midpoint of the male and female constants.
-
-## 9. Pinned versions
-
-| Component | Version |
+| Permission | Use |
 |---|---|
-| Android Gradle Plugin | 8.7.3 |
-| Gradle wrapper | 8.9 |
-| NDK | 27.2.12479018 |
-| SDK CMake | 3.22.1 |
-| compileSdk / targetSdk / minSdk | 35 / 35 / 34 |
-| ABI | arm64-v8a |
-| llama.cpp | tag `b11323`, commit `f11d642a27b921cf22b6a8beb1b899f960fedcde` |
-| Model file | `LFM2.5-VL-1.6B-Q4_0.gguf` |
-| Projector file | `mmproj-LFM2.5-VL-1.6b-Q8_0.gguf` |
+| `READ_STEPS` | Steps on Today and in the coach tips |
+| `READ_ACTIVE_CALORIES_BURNED` | Active calories on Today |
+| `READ_TOTAL_CALORIES_BURNED` | Calories burned on Today |
+| `READ_NUTRITION` | Calories eaten, and the meals of all apps on Today and in the Diary |
+| `WRITE_NUTRITION` | The meals that you log, and the deletion of meals that ThaliWise logged |
 
-## 10. Experiment log and telemetry
+CAUTION: If you uninstall ThaliWise, Android deletes the model files, the history, and the experiment log. Copy the experiment log to a computer before you uninstall the app.
 
-Every identification and every important app event is appended as one JSON object per line to:
+## 5. Requirements
 
-```
-/sdcard/Android/data/com.example.identify/files/experiments/experiment_log.jsonl
-```
+### 5.1 Phone
 
-Pull it to the computer:
+| Item | Requirement |
+|---|---|
+| Android version | Android 14 or newer. Health Connect is a part of Android 14. |
+| CPU | arm64 with the dotprod and i8mm instructions. Tested on a Pixel 8. |
+| Free storage | 1.5 GB for the model files |
+| Memory | Approximately 2.2 GB for the app while the model is loaded |
 
-```bash
-adb pull /sdcard/Android/data/com.example.identify/files/experiments/experiment_log.jsonl
-```
+### 5.2 Build computer
 
-Event types (field `type`):
+| Item | Version |
+|---|---|
+| Operating system | macOS (tested on Apple Silicon, macOS 26) |
+| Android Studio or Android SDK command-line tools | Current release |
+| JDK | 17 or newer (tested with the JetBrains Runtime 21 of Android Studio) |
+| Android SDK Platform and Build-Tools | 35 |
+| Android NDK | 27.2.12479018 |
+| CMake (from the SDK Manager) | 3.22.1 |
 
-| Type | When | Main fields |
+## 6. Installation
+
+### 6.1 Build the app
+
+1. Install Android Studio or the Android SDK command-line tools.
+2. Install the NDK 27.2.12479018 and CMake 3.22.1 with the SDK Manager.
+3. Clone the repository and its llama.cpp submodule:
+   ```bash
+   git clone --recurse-submodules https://github.com/ayushvarma7/thaliwise.git
+   ```
+4. Go to the project folder:
+   ```bash
+   cd thaliwise
+   ```
+5. Make sure that the file `local.properties` contains `sdk.dir=<path to your Android SDK>`.
+
+   NOTE: Android Studio writes this file when it opens the project.
+6. Run the unit tests:
+   ```bash
+   ./gradlew :core:test
+   ```
+7. Build the debug APK:
+   ```bash
+   ./gradlew :app:assembleDebug
+   ```
+
+NOTE: The first build compiles llama.cpp for arm64. This takes several minutes. The native code always uses the Release configuration, because a Debug build makes the model much slower.
+
+### 6.2 Install the app on the phone
+
+1. On the phone, set Developer options > USB debugging to on.
+2. Connect the phone to the computer with a USB cable.
+3. On the phone, tap Allow in the "Allow USB debugging?" dialog.
+4. Install the APK:
+   ```bash
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+NOTE: The `-r` option replaces an installed copy and keeps its data.
+
+### 6.3 Download the model
+
+1. Open ThaliWise.
+2. Do the six onboarding steps. You can skip each question.
+3. Tap Settings.
+4. Tap Download model.
+5. Make sure that Settings shows "Model files are on the device."
+
+NOTE: The download is 1.28 GB. Use a Wi-Fi connection.
+
+| File | Size | Function |
 |---|---|---|
-| `app_start` | process start | device, CPU core types, RAM, model files ready, `previous_exits` (why the last process ended: low_memory, crash_native, user_requested, ...) |
-| `image_prepare` | photo taken or picked | source (camera or gallery), source and output size, rotation, ms |
-| `run` | every identification, including errors | `run_id`, `config` (threads, vision tokens, sampling, threshold), `phases` (wall ms, CPU ms, cores per phase), `native_load`, `native_embed`, `native_generate` (per-stage ms, token counts, ttft, tokens/s, and for every generated token the chosen probability plus the 5 most likely tokens), `knn` (5 nearest saved photos with scores), `few_shot`, `system_prompt`, `raw_output`, `label_stats` (label confidence and the other label starts the model considered), `telemetry` |
-| `feedback` | a meal is logged from the result screen (once per photo) | `run_id`, accepted (the logged food is the guessed one), correction (the logged food's name), final label, time from result to decision |
-| `setting_change`, `download_start`, `download_state`, `model_unload`, `model_delete`, `trim_memory` | as named | the new value or state |
-| `health_permission_result`, `health_read` | the Health Connect permission screen closed; today's numbers were read | granted and denied permissions; steps, active, burned, and eaten kcal, ms, error |
-| `meal_logged`, `meal_undone`, `meal_deleted` | a meal was written, undone on the result screen, or deleted from Today or Diary | `run_id`, model label and cuisine, query, food and its cuisine, portion, table and logged kcal, macros, meal slot, Health Connect record id, screen, error |
-| `profile_saved` | Start or Save at the end of onboarding | mode (first_run or edit), has_name (never the name), age, sex, height, weight, activity, goal, reasons, cuisines, diet, eat more, units, budget and step goal with their suggestions and whether they were edited, Health Connect permissions granted, time in onboarding |
+| `LFM2.5-VL-1.6B-Q4_0.gguf` | 696 MB | Language model, 4-bit |
+| `mmproj-LFM2.5-VL-1.6b-Q8_0.gguf` | 583 MB | Vision encoder and projector, 8-bit |
 
-`telemetry` in a run record:
+Source: [LiquidAI/LFM2.5-VL-1.6B-GGUF](https://huggingface.co/LiquidAI/LFM2.5-VL-1.6B-GGUF).
 
-- `cpu`: CPU time of the whole app process (all threads), average and peak busy cores (CPU time divided by wall time), percent of the device's cores, and CPU time by core type (little, mid, big, from each core's maximum frequency; on the Pixel 8 that is 4x Cortex-A510, 4x Cortex-A715, 1x Cortex-X3) with each type's average clock. Android does not let apps read whole-device CPU use, so these numbers cover this app only.
-- `memory`: resident memory at start, end, and peak (the memory-mapped model files count in `rss_file`), native heap, device free memory, low-memory flag.
-- `battery`: level, temperature, average and peak current, and charge used in mAh. Current and energy are only meaningful on battery; while charging the record says so.
-- `thermal`: Android thermal status (none, light, moderate, severe, ...) and the lowest thermal headroom seen.
+### 6.4 Connect Health Connect
 
-Settings > Telemetry shows the same readings live once a second (CPU cores in use right now, memory, battery temperature, thermal status, which model settings are loaded) and the log's size and path.
+1. Tap Settings.
+2. Tap Connect Health Connect.
+3. On the Health Connect screen, turn on the 5 permissions.
+4. Make sure that Settings shows "Connected."
 
-For fine-tuning later, join `run` and `feedback` lines on `run_id`: the feedback gives the correct label, the run gives the model's answer, its confidence, and its alternatives. The photos themselves stay in the app's private storage; on a debug build they can be copied out with:
+NOTE: Health Connect receives the steps from other apps, for example Fitbit or Google Fit. Make sure that the Health Connect sync of that app is on.
 
-```bash
-adb exec-out run-as com.example.identify tar c files/images > images.tar
+## 7. Operation
+
+### 7.1 Identify a meal
+
+1. On the Today screen, tap Snap meal.
+2. Tap Take photo, or tap Pick from gallery and select a photo.
+3. Tap Identify food.
+4. Read the dish name, the cuisine, and the calories for one serving.
+
+NOTE: The first identification after an app start loads the model. It takes more time than the next identifications.
+
+NOTE: "Identified from memory" means that the app found a similar photo in its memory. To get a new answer from the model, tap Run the model anyway.
+
+### 7.2 Log a meal
+
+1. On the result screen, tap Log meal.
+2. Make sure that the selected food is correct. If it is not correct, type the food name in the search field.
+3. Set the portion with the slider (0.5x to 3x).
+4. Make sure that the calorie value is correct. If it is not correct, type the correct value.
+5. Tap Log.
+6. Tap Done to go back to the Today screen.
+
+NOTE: To remove the meal immediately, tap Undo on the result screen.
+
+### 7.3 Delete a meal
+
+1. Tap Diary.
+2. Tap the meal.
+3. Tap Delete.
+
+NOTE: ThaliWise deletes only the meals that it logged. To delete a meal from another app, use Health Connect.
+
+### 7.4 Change the profile
+
+1. Tap Settings.
+2. Tap Edit profile.
+3. Change the answers.
+4. On step 6, tap Save.
+
+### 7.5 Coach tips
+
+| Location | Tips |
+|---|---|
+| Result screen, before the log | Up to 3 tips: diet warnings, a walk suggestion, an over-budget note, and feedback on your food goals. Tap Dismiss to hide the tips for that photo. |
+| Today screen | One tip for the day. Tap Hide for today to hide it until the next day. |
+
+To stop all tips, set Settings > Coach tips to off.
+
+NOTE: Diet warnings use typical recipes. A dish can be different from the typical recipe.
+
+## 8. Settings
+
+| Setting | Values | Default | Effect |
+|---|---|---|---|
+| Edit profile | Six onboarding steps | Not applicable | Changes the budget, the step goal, and the coach rules |
+| Identification history | List | Not applicable | Shows the identified photos and your corrections |
+| Coach tips | On, off | On | Shows or hides all coach tips |
+| Download model, Delete model files | Not applicable | Not applicable | Adds or removes the 1.28 GB model files |
+| Unload model from memory | Not applicable | Not applicable | Releases approximately 2 GB of app memory |
+| Memory shortcut | On, off | On | Lets the app use the label of a similar photo |
+| Similarity threshold | 0.80 to 0.99 | 0.92 | A higher value lets the memory match only very similar photos |
+| CPU threads | 1 to the number of fast cores (5 on a Pixel 8) | 4 | More fast cores can decrease the time for an answer |
+| Vision tokens per image | 64 to 256 | 256 | Fewer tokens decrease the time and show less detail |
+| Clear history and memory | Not applicable | Not applicable | Deletes the history, the corrections, the photos, and the experiment log. The model files stay. |
+| Connect Health Connect, Refresh, Open Health Connect | Not applicable | Not applicable | Set the Health Connect permissions and read the data again |
+
+## 9. Performance
+
+Values measured on a Pixel 8:
+
+| Measurement | Value |
+|---|---|
+| First identification after an app start, model load included (4 threads, 2026-10-01) | 11.6 s |
+| Identification with the model loaded (2026-10-06, the screenshot above) | 6.1 s |
+| Peak app memory with the model loaded | 2.2 GB |
+| Model download | 1.28 GB |
+
+The vision encoder uses most of the time. A lower Vision tokens setting decreases the time. For the full measurements, see [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md), section 3.
+
+## 10. Project structure
+
+```
+thaliwise/
+  app/                 Android app: UI, Health Connect, Room database, model download
+    src/main/cpp/      JNI bridge to llama.cpp (vlm_bridge.cpp)
+    src/main/assets/   foods.txt (nutrition table), food_tags.txt (diet tags)
+  core/                Pure Java logic with unit tests (no Android imports)
+  third_party/
+    llama.cpp/         Git submodule, tag b11323
+  docs/                Product, model, Health Connect, and technical documents
+  tools/refmem/        Tools for a reference photo memory (not part of the app)
 ```
 
-Clear history and memory deletes the experiment log too, and uninstalling the app deletes everything, so pull the log first. Logcat shows a one-line summary of every run: `adb logcat -s Identify:I VlmBridge:I IdentifyExp:D`.
+## 11. Tests and checks
 
-## 11. Health Connect
+| Command | Result |
+|---|---|
+| `./gradlew :core:test` | 23 test classes, 116 tests |
+| `./gradlew :app:assembleDebug` | Debug APK in `app/build/outputs/apk/debug/` |
+| `./gradlew :app:lintDebug` | Lint report in `app/build/reports/` (0 errors) |
 
-The app reads today's steps, calories burned (total and active), and calories eaten (nutrition logged by any app) from Health Connect, which is built into Android 14 and newer. It uses the platform API in `android.health.connect`, so there is no extra library and no network use. This is why the minimum Android version is now 14.
+The core tests cover the nutrition table, the food matcher, and the answer parser. They also cover the profile math, the walk math, the coach rules, the memory search, and the telemetry statistics.
 
-Permissions (each one approved by the user on the Health Connect screen): READ_STEPS, READ_ACTIVE_CALORIES_BURNED, READ_TOTAL_CALORIES_BURNED, READ_NUTRITION (meals from every app, for Today and Diary), and WRITE_NUTRITION (logging meals, and deleting meals this app logged). Health Connect only shows its permission screen for apps that declare a privacy policy screen, which is `PrivacyPolicyActivity` behind the `ViewPermissionUsageActivity` alias in the manifest.
+## 12. Troubleshooting
 
-Settings > Health Connect shows the connection status and today's numbers. Step data comes from whichever app writes it into Health Connect (Fitbit or Google Fit on the test phone), so that app's Health Connect sync must be on. Every read is logged in the experiment log as a `health_read` event, and the permission screen outcome as `health_permission_result`.
-
-First test on the Pixel 8 (2026-10-01, 4:38 PM): 1,502 steps, 1,322 kcal burned (152 active), nothing eaten logged yet. The Google Fit app showed 1,318 steps at the same time; Health Connect combines all step sources, so its total can differ from any single app's count. The "Open Health Connect" button opens Health Connect's home screen (`android.health.connect.action.HEALTH_HOME_SETTINGS`); the SDK's `ACTION_MANAGE_HEALTH_PERMISSIONS` is reserved for system apps and crashes a normal app.
-
-## 12. Food logging
-
-When the identified dish matches the nutrition table shipped in `app/src/main/assets/foods.txt` (320 foods: US fast-food chains, 20 packaged snacks, everyday staples, fruit, and dishes from Indian, Mexican, Chinese, Japanese, Korean, Thai, Vietnamese, Italian, Mediterranean, Middle Eastern, American, Southern, Caribbean, Latin American, Ethiopian, and Hawaiian cuisine), the result screen shows a big kcal card with the calories for one serving. "Log meal" opens a dialog to pick the food (type another name if the guess is wrong), set the portion (0.5x to 3x), and check or edit the calories; "Different food" opens it with an empty search. "Log" writes one NutritionRecord into Health Connect (calories, protein, carbohydrate, fat, meal name, and a meal type from the time of day), then shows today's eaten, burned, and step totals with Done and Undo. "Undo" deletes that record again. When nothing matches, or the photo is not food, a "No food recognized" card offers Name the food and Retake.
-
-The model only names the food; calories come from the table and the user confirms them. Table values are approximate reference values for one serving (McDonald's US published figures and USDA FoodData Central typical servings, compiled for this prototype), not measurements of the actual plate. Matching (`FoodMatcher` in `:core`) compares words of the label with each food's names and aliases, ignores plurals and filler words, and prefers branded rows only when the brand is named. Among rows that already match by name, the model's cuisine adds 0.1 and the user's favorite cuisines add 0.05, so cuisines only break ties and never turn a non-match into a match. Before matching, `AnswerParser` cleans the label: instruction words the model sometimes copies from the prompt (", at most 6 words"), template words, and free-text openings ("The food in this photo is") are removed, and an answer without a Label line uses its first sentence. Labels saved before this cleaning are cleaned when the memory and the history read them.
-
-Experiment log events: `meal_logged` (run_id, model label and cuisine, query, food and its cuisine, portion, table kcal, logged kcal, whether the user edited it, macros, meal slot, Health Connect record id, error), `meal_undone`, and `meal_deleted`.
-
-## 13. Food app screens and user profile
-
-Phase 10 turned the object identifier into the food app described in `docs/USER_STORIES.md` (personas, profiling, user stories, storyboard).
-
-**Onboarding** runs once on first launch, before the main screens, and again from Settings > Edit profile with the answers filled in. Six steps, every question optional:
-
-| Step | Asks | Used now for |
+| Problem | Possible cause | Action |
 |---|---|---|
-| 1 Welcome | name | "Hi Ayush" on Today |
-| 2 About you | age, sex, height and weight (US or metric), activity level | calorie budget (Mifflin-St Jeor x activity) and step goal (6,000 to 12,000 by activity) |
-| 3 Why you are here | one goal (lose, maintain, build muscle, eat healthier, just track) and reasons | budget minus 500 to lose, plus 300 to build muscle, never below 1,200 (1,500 for men); goal line on Today |
-| 4 Food you love | favorite cuisines (17 chips) | tie-break boost for table rows of those cuisines |
-| 5 How you eat | diet ("No restrictions" is exclusive) and what to eat more of | shown in Settings (warnings and nudges come later) |
-| 6 Your plan | the suggested budget and step goal, editable, with the reasoning; optional Connect Health Connect | the daily budget and step goal |
+| "Model not downloaded" | The model files are not on the phone. | Tap Settings > Download model. |
+| An answer takes a long time | Too many CPU threads, or the first identification after a start. | Set Settings > CPU threads to 4. |
+| Today shows no steps | The step app does not write to Health Connect. | Turn on the Health Connect sync in Fitbit or Google Fit. |
+| `adb: device unauthorized` | The phone does not trust the computer. | Unlock the phone and tap Allow in the USB debugging dialog. |
+| The app stops when the model loads | The CPU does not have the i8mm instructions. | Remove the `GGML_CPU_ARM_ARCH` line from `app/src/main/cpp/CMakeLists.txt` and build again. |
+| The dish name is not correct | The model guess is not correct. | Tap Different food and log the correct food. The app keeps the correction. |
+| No cuisine label on the result | The model did not give a cuisine line. | No action is necessary. The calorie match still operates. |
 
-The answers are stored in the app's SharedPreferences and logged locally as `profile_saved` (without the name).
+## 13. Limitations
 
-**Screens** (bottom tabs Today, Diary, Settings):
+- The calories are table values for one typical serving. They are not a measurement of the food on your plate.
+- A dish that is not in the table can be logged only with the name of a food that is in the table.
+- The model sometimes does not use the requested answer format. The app cleans the answer, but the answer can have no cuisine.
+- Diet warnings use typical recipes. Halal checks only pork and alcohol. Kosher checks only pork and shellfish.
+- The calorie budget is an estimate from the Mifflin-St Jeor formula. It is not medical advice.
+- The model operates on the CPU only.
 
-- **Today** (home): greeting and goal, a calorie ring (eaten / budget, "kcal left" or "kcal over budget" in red), calories burned (total and active), a steps bar with "steps to go", today's meals from every app (other apps' meals are marked), and a Snap meal button. Without Health Connect access it shows a Connect card.
-- **Snap**: Take photo or Pick from gallery, then Identify food.
-- **Result**: the dish name, a cuisine chip, the description, the kcal card (Log meal, Different food) or the "No food recognized" card (Name the food, Retake), then the Logged card with today's totals, Done (back to a fresh Today), and Undo. Show details keeps the full timing, CPU, memory, and confidence breakdown.
-- **Diary**: the last 7 days of meals grouped by day with daily totals. Tapping a meal this app logged deletes it after a confirmation; meals from other apps point to Health Connect.
-- **Settings**: the profile summary with Edit profile and Identification history (the old History screen), then the model, memory, performance, telemetry, and Health Connect sections as before.
+## 14. Documentation
 
-**Coach (Phase 11):** see section 14.
+| Document | Contents |
+|---|---|
+| [docs/USER_STORIES.md](docs/USER_STORIES.md) | Personas, profile questions, user stories, and the UI storyboard |
+| [docs/MODELS.md](docs/MODELS.md) | The on-device model, how ThaliWise uses it, and options for better use |
+| [docs/HEALTH_CONNECT.md](docs/HEALTH_CONNECT.md) | The Health Connect data that ThaliWise uses, all 40 record types, and ideas |
+| [docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md) | Pipeline, measurements, experiment log fields, pinned versions |
+| [docs/phase10/](docs/phase10/), [docs/phase11/](docs/phase11/) | Step-by-step build specifications |
+| [PROGRESS.md](PROGRESS.md) | The development record, step by step |
 
-**Learning without Accept and Correct buttons:** logging a meal is the feedback. If the logged food is the table row the app guessed, the photo is saved as an accept; if it is another food, as a correction to that food's name. This happens once per photo, and the memory and few-shot layers (section 5) use it as before.
+The project had the name IdentifyVLM until 2026-10-02. The Android package id stays `com.example.identify`, so an installed copy updates in place and keeps its data.
 
-## 14. Coach tips
+## 15. Third-party components
 
-Phase 11 uses the onboarding answers that Phase 10 stored (`docs/USER_STORIES.md` E8). The coach is a set of plain rules in `:core` (`Coach`, `DietRules`, `WalkMath`), not a model. It shows short tips where the user decides, and never blocks or delays logging.
+| Component | Use | License |
+|---|---|---|
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) (tag b11323) | Model runtime on the phone | MIT |
+| [LFM2.5-VL-1.6B](https://huggingface.co/LiquidAI/LFM2.5-VL-1.6B) by Liquid AI | Vision language model | LFM Open License v1.0 |
+| AndroidX, Material Components for Android | UI, navigation, Room database | Apache 2.0 |
+| Glide | Image loading | BSD, part MIT and Apache 2.0 |
+| JUnit 4 | Unit tests | Eclipse Public License 1.0 |
 
-- **Result screen, before logging:** a Coach card under the kcal card with up to 3 tips for the guessed food at one serving: diet warnings ("Usually contains meat, and your profile says Vegetarian."), a walk tip when the step goal is not reached and the meal is big or goes over budget ("Ayush, you are at 3,200 of 10,000 steps and this meal is about 450 kcal. A 30 minute walk (about 3,000 steps) burns about 141 kcal."), an over-budget note, and feedback on the "eat more of" answers (protein, vegetables, fried, sugar, portions). Dismiss hides it for that photo.
-- **Today:** one line (over budget with a walk suggestion, step goal reached, steps left after 5 PM, or kcal left), with "Hide for today".
-- **Settings:** "Coach tips" switch, on by default.
+The nutrition values come from USDA FoodData Central, published restaurant nutrition, typical restaurant and home recipes, and typical package labels. All values are approximate.
 
-Data behind the tips: `app/src/main/assets/food_tags.txt` says what each of the 320 foods usually contains (meat, pork, fish, shellfish, egg, dairy, gluten, alcohol) and whether it is usually fried, sweet, or has vegetables. These are typical recipes, so the wording is always "usually". Walk numbers use 3.5 MET moderate walking at about 100 steps a minute (kcal per minute = 3.5 x 3.5 x kg / 200), with 70 kg when the weight was not given.
+## 16. License
 
-Experiment log: `nudge_shown` and `nudge_dismissed` (screen, run_id, food_id, kinds, and each tip with its numbers), and `meal_logged.coach_tips` (the kinds on screen when the meal was logged). Joining them shows which tips change what people log.
+This repository has no license file. The author keeps all rights.
 
-Limits: Kosher covers pork and shellfish only (not meat with dairy or certification), Halal covers pork and alcohol only, and the tags describe common recipes, not the photo. There are no push notifications; tips appear only inside the app.
-
-Device test (Pixel 8, 2026-10-02): the Phase 11 build was installed at the user's request and used normally; the result-screen Coach card (walk and protein tips) and the Today line appeared. The same use showed that the model sometimes copies prompt wording into its label and answers packaged food in free text; step 11.5 fixes both. By the user's choice, phone screenshots and on-device logs are not used for further testing without their explicit approval.
+Author: Ayush Varma.

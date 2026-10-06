@@ -9,3 +9,6 @@ local.properties
 captures/
 *.gguf
 .toolchain/
+
+# Python bytecode from tools/
+__pycache__/
